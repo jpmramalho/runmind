@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../main.dart';
-import 'edit_profile_screen.dart';
-import 'settings_screen.dart';
+import 'onboarding_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -25,34 +24,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return data;
   }
 
+  Future<void> _signOut() async {
+    await supabase.auth.signOut();
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/login');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final currentUser = supabase.auth.currentUser;
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final textColor = isLight ? Colors.black : Colors.white;
+    final cardBgColor = isLight ? Colors.white : const Color(0xFF1C1C22);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF121217),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Perfil',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
         ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Colors.white),
+            icon: Icon(
+              isLight ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+              color: textColor,
+            ),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
+              themeNotifier.value = isLight ? ThemeMode.dark : ThemeMode.light;
             },
           ),
         ],
-        backgroundColor: Colors.transparent,
-        elevation: 0,
       ),
       body: FutureBuilder<Map<String, dynamic>?>(
         future: _fetchUserProfile(),
@@ -63,110 +68,183 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           }
 
-          final profileData = snapshot.data;
-          final userName = profileData?['name'] ?? 'Usuário';
-          final userEmail = currentUser?.email ?? 'Sem e-mail';
-          final avatarUrl = profileData?['avatar_url'] as String?;
+          final profile = snapshot.data;
+          final name = profile?['name'] ?? 'Corredor';
+          final level = profile?['level'] ?? 'Iniciante';
+          final goal = profile?['goal'] ?? 'Não definido';
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                const SizedBox(height: 16),
-                CircleAvatar(
-                  radius: 50,
-                  backgroundColor: const Color(0xFF1C1C22),
-                  backgroundImage: avatarUrl != null
-                      ? NetworkImage(avatarUrl)
-                      : null,
-                  child: avatarUrl == null
-                      ? const Icon(Icons.person, size: 50, color: Colors.white)
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  userName,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  userEmail,
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final updated = await Navigator.push<bool>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => EditProfileScreen(
-                          currentName: userName,
-                          currentAvatarUrl: avatarUrl,
+                // --- CABEÇALHO COM AVATAR E INFOS ---
+                Center(
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 45,
+                        backgroundColor: const Color(0xFFFF2D55),
+                        child: Text(
+                          name.isNotEmpty ? name[0].toUpperCase() : 'C',
+                          style: const TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
-                    );
-
-                    if (updated == true) {
-                      setState(() {});
-                    }
-                  },
-                  icon: const Icon(Icons.edit, size: 16, color: Colors.white),
-                  label: const Text(
-                    'Editar Perfil',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: Colors.grey.shade800),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1C1C22),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildStatItem('Corridas', '0'),
-                      _buildStatItem('Distância', '0 km'),
-                      _buildStatItem('Tempo', '0h'),
+                      const SizedBox(height: 12),
+                      Text(
+                        name,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$level • Meta: $goal',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
                     ],
                   ),
                 ),
+                const SizedBox(height: 24),
+
+                // --- BOTÃO REFAZER TESTE INICIAL / MUDAR OBJETIVOS ---
+                Container(
+                  decoration: BoxDecoration(
+                    color: cardBgColor,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: ListTile(
+                    leading: const Icon(Icons.tune, color: Color(0xFFFF2D55)),
+                    title: Text(
+                      'Editar Nível e Objetivos',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Refazer teste inicial e alterar metas',
+                    ),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: Colors.grey.shade500,
+                    ),
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const OnboardingScreen(isEditing: true),
+                        ),
+                      );
+                      setState(
+                        () {},
+                      ); // Recarrega os dados do perfil após editar
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // --- OPÇÕES DE CONFIGURAÇÃO E CONTA ---
+                Container(
+                  decoration: BoxDecoration(
+                    color: cardBgColor,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(
+                          Icons.person_outline,
+                          color: Color(0xFFFF2D55),
+                        ),
+                        title: Text(
+                          'Dados Pessoais',
+                          style: TextStyle(color: textColor),
+                        ),
+                        subtitle: Text(
+                          'CPF: ${profile?['cpf'] ?? 'Não informado'}',
+                        ),
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          color: Colors.grey.shade500,
+                        ),
+                        onTap: () {},
+                      ),
+                      Divider(height: 1, color: Colors.grey.shade800),
+                      ListTile(
+                        leading: const Icon(
+                          Icons.notifications_none,
+                          color: Color(0xFFFF2D55),
+                        ),
+                        title: Text(
+                          'Notificações de Lembrete',
+                          style: TextStyle(color: textColor),
+                        ),
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          color: Colors.grey.shade500,
+                        ),
+                        onTap: () {},
+                      ),
+                      Divider(height: 1, color: Colors.grey.shade800),
+                      ListTile(
+                        leading: const Icon(
+                          Icons.privacy_tip_outlined,
+                          color: Color(0xFFFF2D55),
+                        ),
+                        title: Text(
+                          'Privacidade e Termos',
+                          style: TextStyle(color: textColor),
+                        ),
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          color: Colors.grey.shade500,
+                        ),
+                        onTap: () {},
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // --- BOTÃO SAIR DA CONTA ---
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: OutlinedButton.icon(
+                    onPressed: _signOut,
+                    icon: const Icon(Icons.logout, color: Colors.redAccent),
+                    label: const Text(
+                      'Sair da Conta',
+                      style: TextStyle(
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.redAccent),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
               ],
             ),
           );
         },
       ),
-    );
-  }
-
-  Widget _buildStatItem(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-        ),
-      ],
     );
   }
 }

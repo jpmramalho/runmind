@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../main.dart';
+
 class ProgressScreen extends StatefulWidget {
   const ProgressScreen({super.key});
 
@@ -8,498 +10,457 @@ class ProgressScreen extends StatefulWidget {
 }
 
 class _ProgressScreenState extends State<ProgressScreen> {
-  int _selectedPeriod = 0; // 0: Semana, 1: Mês, 2: Ano
+  DateTime _focusedMonth = DateTime.now();
+  DateTime? _selectedDay;
+  String _selectedPeriod = 'Mensal'; // Filtro: Semanal, Mensal, Anual
 
-  // Mapeamento de eventos do calendário:
-  // 'workout' = Treino (Ícone de Corredor)
-  // 'race' = Prova (Ícone de Troféu)
-  final Map<int, String> _calendarEvents = {
-    2: 'workout',
-    5: 'workout',
-    9: 'workout',
-    12: 'workout',
-    14: 'workout', // Hoje
-    18: 'workout',
-    21: 'workout',
-    27: 'race', // Exemplo de dia com Prova
-  };
+  final List<String> _weekDays = [
+    'Dom',
+    'Seg',
+    'Ter',
+    'Qua',
+    'Qui',
+    'Sex',
+    'Sáb',
+  ];
+  final List<String> _monthNames = [
+    'Janeiro',
+    'Fevereiro',
+    'Março',
+    'Abril',
+    'Maio',
+    'Junho',
+    'Julho',
+    'Agosto',
+    'Setembro',
+    'Outubro',
+    'Novembro',
+    'Dezembro',
+  ];
 
-  int? _selectedDay = 14; // Dia selecionado por padrão
+  // Verifica se o dia possui treino (Segunda, Quarta e Sábado)
+  bool _hasWorkoutOnDay(DateTime date) {
+    return date.weekday == DateTime.monday ||
+        date.weekday == DateTime.wednesday ||
+        date.weekday == DateTime.saturday;
+  }
+
+  // Verifica se o dia possui troféu de campeonato (Exemplo: dia 25)
+  bool _hasTrophyOnDay(DateTime date) {
+    return date.day == 25;
+  }
+
+  Future<Map<String, dynamic>?> _fetchUserProfile() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return null;
+
+    final data = await supabase
+        .from('profiles')
+        .select()
+        .eq('id', user.id)
+        .maybeSingle();
+
+    return data;
+  }
+
+  void _previousMonth() {
+    setState(() {
+      _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month - 1);
+    });
+  }
+
+  void _nextMonth() {
+    setState(() {
+      _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isLight = theme.brightness == Brightness.light;
+    final textColor = isLight ? Colors.black : Colors.white;
+    final cardBgColor = isLight ? Colors.white : const Color(0xFF1C1C22);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Progresso',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+        title: Text(
+          'Evolução',
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: CircleAvatar(
-              backgroundColor: const Color(0xFFFF2D55),
-              radius: 18,
-              child: const Text(
-                'J',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+          IconButton(
+            icon: Icon(
+              isLight ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+              color: textColor,
             ),
+            onPressed: () {
+              themeNotifier.value = isLight ? ThemeMode.dark : ThemeMode.light;
+            },
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- BLOCO 1: SELETOR DE PERÍODO & GRÁFICO ---
-            _buildCardWrapper(
-              isDark: isDark,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(4),
+            // --- HEADER PERFIL E CONQUISTAS ---
+            FutureBuilder<Map<String, dynamic>?>(
+              future: _fetchUserProfile(),
+              builder: (context, snapshot) {
+                String name = 'Corredor';
+                if (snapshot.hasData && snapshot.data != null) {
+                  name = snapshot.data!['name'] ?? 'Corredor';
+                }
+
+                return Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: const Color(0xFFFF2D55),
+                      child: Text(
+                        name.isNotEmpty ? name[0].toUpperCase() : 'C',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Nível Intermediário • Meta 10k',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF2D55).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(
+                            Icons.local_fire_department,
+                            color: Color(0xFFFF2D55),
+                            size: 16,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            '12 dias',
+                            style: TextStyle(
+                              color: Color(0xFFFF2D55),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+
+            // --- FILTRO DE PERÍODO (SEMANAL / MENSAL / ANUAL) ---
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: ['Semanal', 'Mensal', 'Anual'].map((period) {
+                final isSelected = _selectedPeriod == period;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedPeriod = period;
+                    });
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.grey.shade800
-                          : Colors.grey.shade200,
+                      color: isSelected ? const Color(0xFFFF2D55) : cardBgColor,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Row(
-                      children: [
-                        _buildPeriodTab('Semana', 0, isDark),
-                        _buildPeriodTab('Mês', 1, isDark),
-                        _buildPeriodTab('Ano', 2, isDark),
-                      ],
+                    child: Text(
+                      period,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : Colors.grey.shade500,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w500,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Esta semana',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.black,
-                    ),
-                  ),
-                  Text(
-                    'Últimas 12 semanas',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    height: 120,
-                    child: Stack(
-                      alignment: Alignment.bottomCenter,
-                      children: [
-                        Positioned(
-                          top: 10,
-                          right: 0,
-                          child: Text(
-                            '1km',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          top: 50,
-                          right: 0,
-                          child: Text(
-                            '0.5km',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 20,
-                          right: 0,
-                          child: Text(
-                            '0',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 25,
-                          left: 0,
-                          right: 30,
-                          child: Container(
-                            height: 1,
-                            color: isDark
-                                ? Colors.grey.shade800
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 25,
-                          left: 0,
-                          right: 30,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: List.generate(12, (index) {
-                              return Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: index == 11
-                                      ? const Color(0xFFFF2D55)
-                                      : Colors.transparent,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: const Color(0xFFFF2D55),
-                                    width: 2,
-                                  ),
-                                ),
-                              );
-                            }),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          left: 0,
-                          right: 30,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              Text(
-                                'JUL',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.grey.shade500,
-                                ),
-                              ),
-                              Text(
-                                'AGO',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.grey.shade500,
-                                ),
-                              ),
-                              Text(
-                                'SET',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.grey.shade500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Resumo',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.black,
-                    ),
-                  ),
-                  Text(
-                    '14 SET – 20 SET',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                  ),
-                  const SizedBox(height: 16),
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.6,
-                    children: [
-                      _buildMetricCard(
-                        'distância',
-                        '0 km',
-                        '0 km na semana anterior',
-                        isDark,
-                        isPrimary: true,
-                      ),
-                      _buildMetricCard(
-                        'tempo',
-                        '0m',
-                        '0m na semana anterior',
-                        isDark,
-                      ),
-                      _buildMetricCard(
-                        'treinos',
-                        '0',
-                        '0 na semana anterior',
-                        isDark,
-                      ),
-                      _buildMetricCard(
-                        'carga',
-                        '0 ZP',
-                        '0 ZP na semana anterior',
-                        isDark,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                );
+              }).toList(),
             ),
+            const SizedBox(height: 20),
 
-            const SizedBox(height: 16),
-
-            // --- BLOCO 2: MÊS COM A IA ---
-            _buildCardWrapper(
-              isDark: isDark,
+            // --- AGENDA / CALENDÁRIO COM SÍMBOLOS AJUSTADOS ---
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cardBgColor,
+                borderRadius: BorderRadius.circular(20),
+              ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '1 mês com a IA',
+                        '${_monthNames[_focusedMonth.month - 1]} ${_focusedMonth.year}',
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.black,
+                          color: textColor,
                         ),
                       ),
                       Row(
                         children: [
-                          _buildChipTag('21K', isDark),
-                          const SizedBox(width: 6),
-                          _buildChipTag('10/jan', isDark),
+                          IconButton(
+                            icon: Icon(Icons.chevron_left, color: textColor),
+                            onPressed: _previousMonth,
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.chevron_right, color: textColor),
+                            onPressed: _nextMonth,
+                          ),
                         ],
                       ),
                     ],
                   ),
-                  Text(
-                    'Semana no ciclo: 1/17',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                  ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
                   Row(
-                    children: [
-                      SizedBox(
-                        width: 100,
-                        height: 100,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            SizedBox(
-                              width: 90,
-                              height: 90,
-                              child: CircularProgressIndicator(
-                                value: 0.01,
-                                strokeWidth: 10,
-                                backgroundColor: isDark
-                                    ? Colors.grey.shade800
-                                    : Colors.grey.shade300,
-                                valueColor: const AlwaysStoppedAnimation<Color>(
-                                  Color(0xFFFF2D55),
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: _weekDays
+                        .map(
+                          (day) => Expanded(
+                            child: Center(
+                              child: Text(
+                                day,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey.shade500,
                                 ),
                               ),
                             ),
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  '1%',
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark ? Colors.white : Colors.black,
-                                  ),
-                                ),
-                                Text(
-                                  'do ciclo',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.grey.shade500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 24),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            _buildCycleInfoRow(
-                              Icons.flag_outlined,
-                              'distância',
-                              '0 m',
-                              isDark,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildCycleInfoRow(
-                              Icons.timer_outlined,
-                              'tempo correndo',
-                              '0 min',
-                              isDark,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildCycleInfoRow(
-                              Icons.emoji_events_outlined,
-                              'treinos',
-                              '0',
-                              isDark,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // --- BLOCO 3: ESTIMATIVAS DE PROVA ---
-            _buildCardWrapper(
-              isDark: isDark,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Estimativas de prova',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.black,
-                    ),
-                  ),
-                  Text(
-                    'Baseado nos seus ritmos atuais',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                  ),
-                  const SizedBox(height: 16),
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.4,
-                    children: [
-                      _buildRaceEstimateCard('5K', '24:31', '4:54 /km', isDark),
-                      _buildRaceEstimateCard(
-                        '10K',
-                        '51:25',
-                        '5:09 /km',
-                        isDark,
-                      ),
-                      _buildRaceEstimateCard(
-                        '15K',
-                        '1h20:44',
-                        '5:23 /km',
-                        isDark,
-                      ),
-                      _buildRaceEstimateCard(
-                        '21K',
-                        '1h56:18',
-                        '5:31 /km',
-                        isDark,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // --- BLOCO 4: CALENDÁRIO COM ÍCONES DE TREINO E TROFÉU ---
-            _buildCardWrapper(
-              isDark: isDark,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Icon(Icons.chevron_left, size: 20),
-                      Text(
-                        'Setembro 2026',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.black,
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: const [
-                      _CalendarDayHeader('S'),
-                      _CalendarDayHeader('T'),
-                      _CalendarDayHeader('Q'),
-                      _CalendarDayHeader('Q'),
-                      _CalendarDayHeader('S'),
-                      _CalendarDayHeader('S'),
-                      _CalendarDayHeader('D'),
-                    ],
+                          ),
+                        )
+                        .toList(),
                   ),
                   const SizedBox(height: 12),
+                  _buildCalendarGrid(textColor),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
 
-                  _buildInteractiveCalendarGrid(isDark),
+            // --- CARDS DE MÉTRICAS GERAIS E TAXA DE ADERÊNCIA ---
+            Text(
+              'Resumo de Desempenho',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    title: 'Distância Total',
+                    value: '124,5 km',
+                    subtitle: '+12% este mês',
+                    icon: Icons.map_outlined,
+                    theme: theme,
+                    textColor: textColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatCard(
+                    title: 'Treinos Concluídos',
+                    value: '18 / 20',
+                    subtitle: '90% de taxa',
+                    icon: Icons.check_circle_outline,
+                    theme: theme,
+                    textColor: textColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    title: 'Tempo de Corrida',
+                    value: '12h 40m',
+                    subtitle: 'Média de 42m/treino',
+                    icon: Icons.timer_outlined,
+                    theme: theme,
+                    textColor: textColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatCard(
+                    title: 'Pace Médio',
+                    value: '6:12 /km',
+                    subtitle: 'Melhor: 5:45 /km',
+                    icon: Icons.speed,
+                    theme: theme,
+                    textColor: textColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
 
-                  const SizedBox(height: 24),
+            // --- ANÁLISE DE PERCEPÇÃO E HUMOR NOS TREINOS ---
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cardBgColor,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    'Resumo',
+                    'Percepção de Esforço & Sentimento',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: textColor,
                     ),
                   ),
-                  Text(
-                    '1 SET – 30 SET',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                  ),
-                  const SizedBox(height: 16),
-
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.6,
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildMetricCard(
-                        'tempo',
-                        '0m',
-                        '/ 0m',
-                        isDark,
-                        isPrimary: true,
+                      _buildMoodIndicator(
+                        '😄',
+                        'Excelente',
+                        '65%',
+                        Colors.green,
                       ),
-                      _buildMetricCard('distância', '0 km', '/ 0 km', isDark),
-                      _buildMetricCard('treinos', '0', '/ 0', isDark),
-                      _buildMetricCard('carga', '0 ZP', '/ 0 ZP', isDark),
+                      _buildMoodIndicator('🙂', 'Bom', '25%', Colors.blue),
+                      _buildMoodIndicator('😐', 'Normal', '10%', Colors.orange),
+                      _buildMoodIndicator('😫', 'Cansado', '0%', Colors.red),
                     ],
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // --- HISTÓRICO DE TREINOS RECENTES ---
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Histórico Recente',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {},
+                  child: const Text(
+                    'Ver Todos',
+                    style: TextStyle(color: Color(0xFFFF2D55)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _buildWorkoutHistoryItem(
+              title: 'Rodagem Contínua',
+              date: 'Sábado, 20 de Setembro',
+              distance: '4.53 km',
+              pace: '6:37 /km',
+              duration: '30:00',
+              theme: theme,
+              textColor: textColor,
+            ),
+            const SizedBox(height: 10),
+            _buildWorkoutHistoryItem(
+              title: 'Treino de TI (Intervalado)',
+              date: 'Quarta, 17 de Setembro',
+              distance: '7.00 km',
+              pace: '5:45 /km',
+              duration: '50:00',
+              theme: theme,
+              textColor: textColor,
+            ),
+            const SizedBox(height: 24),
+
+            // --- BOTÃO EXPORTAR RELATÓRIO ---
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Gerando relatório de evolução em PDF...'),
+                      backgroundColor: Color(0xFFFF2D55),
+                    ),
+                  );
+                },
+                icon: const Icon(
+                  Icons.file_download_outlined,
+                  color: Color(0xFFFF2D55),
+                ),
+                label: const Text(
+                  'Exportar Relatório em PDF',
+                  style: TextStyle(
+                    color: Color(0xFFFF2D55),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFFFF2D55)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -509,107 +470,91 @@ class _ProgressScreenState extends State<ProgressScreen> {
     );
   }
 
-  // --- INTERACTIVITY DO CALENDÁRIO ---
+  Widget _buildCalendarGrid(Color textColor) {
+    final daysInMonth = DateUtils.getDaysInMonth(
+      _focusedMonth.year,
+      _focusedMonth.month,
+    );
+    final firstDayOfMonth = DateTime(
+      _focusedMonth.year,
+      _focusedMonth.month,
+      1,
+    );
+    final startingWeekday = firstDayOfMonth.weekday % 7;
 
-  Widget _buildInteractiveCalendarGrid(bool isDark) {
-    final days = [
-      '',
-      '',
-      '1',
-      '2',
-      '3',
-      '4',
-      '5',
-      '6',
-      '7',
-      '8',
-      '9',
-      '10',
-      '11',
-      '12',
-      '13',
-      '14',
-      '15',
-      '16',
-      '17',
-      '18',
-      '19',
-      '20',
-      '21',
-      '22',
-      '23',
-      '24',
-      '25',
-      '26',
-      '27',
-      '28',
-      '29',
-      '30',
-      '',
-      '',
-      '',
-    ];
+    final today = DateTime.now();
 
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: days.length,
+      itemCount: daysInMonth + startingWeekday,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7,
         mainAxisSpacing: 6,
         crossAxisSpacing: 6,
       ),
       itemBuilder: (context, index) {
-        final dayText = days[index];
-        if (dayText.isEmpty) return const SizedBox();
+        if (index < startingWeekday) {
+          return const SizedBox();
+        }
 
-        final dayNum = int.parse(dayText);
-        final eventType = _calendarEvents[dayNum];
-        final isSelected = _selectedDay == dayNum;
+        final dayNumber = index - startingWeekday + 1;
+        final date = DateTime(
+          _focusedMonth.year,
+          _focusedMonth.month,
+          dayNumber,
+        );
+
+        final isToday = DateUtils.isSameDay(date, today);
+        final isSelected =
+            _selectedDay != null && DateUtils.isSameDay(date, _selectedDay);
+        final hasWorkout = _hasWorkoutOnDay(date);
+        final hasTrophy = _hasTrophyOnDay(date);
 
         return GestureDetector(
           onTap: () {
             setState(() {
-              _selectedDay = dayNum;
+              _selectedDay = date;
             });
           },
           child: Container(
             decoration: BoxDecoration(
-              color: isSelected
-                  ? const Color(0xFFFF2D55).withOpacity(0.15)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-              border: isSelected
-                  ? Border.all(color: const Color(0xFFFF2D55), width: 1.5)
-                  : null,
+              color: isToday
+                  ? const Color(0xFFFF2D55)
+                  : (isSelected
+                        ? const Color(0xFFFF2D55).withOpacity(0.3)
+                        : Colors.transparent),
+              shape: BoxShape.circle,
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Stack(
+              alignment: Alignment.center,
               children: [
                 Text(
-                  dayText,
+                  '$dayNumber',
                   style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: isSelected
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                    color: isSelected
-                        ? const Color(0xFFFF2D55)
-                        : (isDark ? Colors.white : Colors.black87),
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: isToday ? Colors.white : textColor,
                   ),
                 ),
-                if (eventType != null) ...[
-                  const SizedBox(height: 2),
-                  Icon(
-                    eventType == 'workout'
-                        ? Icons.directions_run
-                        : Icons.emoji_events,
-                    size: 13,
-                    color: eventType == 'workout'
-                        ? const Color(0xFFFF2D55)
-                        : Colors.amber,
+                if (hasTrophy)
+                  const Positioned(
+                    bottom: 2,
+                    child: Icon(
+                      Icons.emoji_events,
+                      size: 11,
+                      color: Color(0xFFFFD700),
+                    ),
+                  )
+                else if (hasWorkout)
+                  Positioned(
+                    bottom: 2,
+                    child: Icon(
+                      Icons.directions_run,
+                      size: 11,
+                      color: isToday ? Colors.white : const Color(0xFFFF2D55),
+                    ),
                   ),
-                ],
               ],
             ),
           ),
@@ -618,197 +563,146 @@ class _ProgressScreenState extends State<ProgressScreen> {
     );
   }
 
-  // --- HELPERS DE UI ---
-
-  Widget _buildCardWrapper({required Widget child, required bool isDark}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey.shade900 : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: child,
-    );
-  }
-
-  Widget _buildPeriodTab(String title, int index, bool isDark) {
-    bool isSelected = _selectedPeriod == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _selectedPeriod = index),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? (isDark ? Colors.black : Colors.white)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected
-                  ? (isDark ? Colors.white : Colors.black)
-                  : Colors.grey,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMetricCard(
-    String label,
-    String value,
-    String subtext,
-    bool isDark, {
-    bool isPrimary = false,
+  Widget _buildStatCard({
+    required String title,
+    required String value,
+    required String subtitle,
+    required IconData icon,
+    required ThemeData theme,
+    required Color textColor,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isPrimary
-            ? const Color(0xFFFF2D55)
-            : (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: isPrimary ? Colors.white70 : Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 4),
+          Icon(icon, color: const Color(0xFFFF2D55), size: 22),
+          const SizedBox(height: 10),
           Text(
             value,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: isPrimary
-                  ? Colors.white
-                  : (isDark ? Colors.white : Colors.black),
+              color: textColor,
             ),
           ),
           const SizedBox(height: 2),
           Text(
-            subtext,
+            title,
             style: TextStyle(
-              fontSize: 10,
-              color: isPrimary ? Colors.white70 : Colors.grey.shade500,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: textColor,
             ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildChipTag(String label, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: isDark ? Colors.white : Colors.black,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCycleInfoRow(
-    IconData icon,
+  Widget _buildMoodIndicator(
+    String emoji,
     String label,
-    String value,
-    bool isDark,
+    String percentage,
+    Color color,
   ) {
-    return Row(
+    return Column(
       children: [
-        Icon(icon, size: 18, color: Colors.grey.shade600),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-            ),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : Colors.black,
-              ),
-            ),
-          ],
+        Text(emoji, style: const TextStyle(fontSize: 22)),
+        const SizedBox(height: 4),
+        Text(
+          percentage,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
         ),
       ],
     );
   }
 
-  Widget _buildRaceEstimateCard(
-    String distance,
-    String time,
-    String pace,
-    bool isDark,
-  ) {
+  Widget _buildWorkoutHistoryItem({
+    required String title,
+    required String date,
+    required String distance,
+    required String pace,
+    required String duration,
+    required ThemeData theme,
+    required Color textColor,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(16),
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(14),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
         children: [
-          Text(
-            distance,
-            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            time,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF2D55).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.directions_run,
+              color: Color(0xFFFF2D55),
+              size: 20,
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            pace,
-            style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+                Text(
+                  date,
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                distance,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+              Text(
+                '$pace • $duration',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+              ),
+            ],
           ),
         ],
       ),
-    );
-  }
-}
-
-class _CalendarDayHeader extends StatelessWidget {
-  final String day;
-  const _CalendarDayHeader(this.day);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      day,
-      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
     );
   }
 }
