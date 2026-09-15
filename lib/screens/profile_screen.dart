@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../main.dart';
+import 'edit_personal_data_screen.dart';
+import 'history_screen.dart';
 import 'onboarding_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -72,12 +74,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final name = profile?['name'] ?? 'Corredor';
           final level = profile?['level'] ?? 'Iniciante';
           final goal = profile?['goal'] ?? 'Não definido';
+          final cpf = profile?['cpf'] ?? 'Não informado';
+          final age = profile?['age'] != null
+              ? '${profile!['age']} anos'
+              : 'Não informada';
+          final gender = profile?['gender'] ?? 'Não informado';
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                // --- CABEÇALHO COM AVATAR E INFOS ---
                 Center(
                   child: Column(
                     children: [
@@ -116,7 +122,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // --- BOTÃO REFAZER TESTE INICIAL / MUDAR OBJETIVOS ---
                 Container(
                   decoration: BoxDecoration(
                     color: cardBgColor,
@@ -139,22 +144,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: Colors.grey.shade500,
                     ),
                     onTap: () async {
-                      await Navigator.push(
+                      final updated = await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) =>
                               const OnboardingScreen(isEditing: true),
                         ),
                       );
-                      setState(
-                        () {},
-                      ); // Recarrega os dados do perfil após editar
+                      if (updated == true) {
+                        setState(() {});
+                      }
                     },
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                // --- OPÇÕES DE CONFIGURAÇÃO E CONTA ---
                 Container(
                   decoration: BoxDecoration(
                     color: cardBgColor,
@@ -169,18 +173,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         title: Text(
                           'Dados Pessoais',
-                          style: TextStyle(color: textColor),
+                          style: TextStyle(
+                            color: textColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         subtitle: Text(
-                          'CPF: ${profile?['cpf'] ?? 'Não informado'}',
+                          'CPF: $cpf • Idade: $age • Sexo: $gender',
+                          style: const TextStyle(fontSize: 12),
                         ),
                         trailing: Icon(
                           Icons.chevron_right,
                           color: Colors.grey.shade500,
                         ),
-                        onTap: () {},
+                        onTap: () async {
+                          final updated = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const EditPersonalDataScreen(),
+                            ),
+                          );
+                          if (updated == true) {
+                            setState(() {});
+                          }
+                        },
                       ),
                       Divider(height: 1, color: Colors.grey.shade800),
+
+                      // --- NOVO BOTÃO DE HISTÓRICO ---
+                      ListTile(
+                        leading: const Icon(
+                          Icons.history,
+                          color: Color(0xFFFF2D55),
+                        ),
+                        title: Text(
+                          'Histórico',
+                          style: TextStyle(
+                            color: textColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        subtitle: const Text(
+                          'Treinos e registros de lesões',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          color: Colors.grey.shade500,
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const HistoryScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      Divider(height: 1, color: Colors.grey.shade800),
+
                       ListTile(
                         leading: const Icon(
                           Icons.notifications_none,
@@ -217,7 +269,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // --- BOTÃO SAIR DA CONTA ---
                 SizedBox(
                   width: double.infinity,
                   height: 50,

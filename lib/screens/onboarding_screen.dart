@@ -1,36 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../main.dart';
 import 'main_screen.dart';
-
-// Formatador de máscara para CPF: 000.000.000-00
-class CpfInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final text = newValue.text.replaceAll(RegExp(r'\D'), '');
-    if (text.length > 11) return oldValue;
-
-    final buffer = StringBuffer();
-    for (int i = 0; i < text.length; i++) {
-      if (i == 3 || i == 6) {
-        buffer.write('.');
-      } else if (i == 9) {
-        buffer.write('-');
-      }
-      buffer.write(text[i]);
-    }
-
-    final string = buffer.toString();
-    return newValue.copyWith(
-      text: string,
-      selection: TextSelection.collapsed(offset: string.length),
-    );
-  }
-}
 
 class OnboardingScreen extends StatefulWidget {
   final bool isEditing;
@@ -42,13 +13,6 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  final _formKey = GlobalKey<FormState>();
-
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _ageController = TextEditingController();
-  final TextEditingController _cpfController = TextEditingController();
-  String _selectedGender = 'Masculino';
-
   final List<String> _levels = [
     'Iniciante',
     'Casual',
@@ -91,8 +55,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   ];
   String? _selectedGoal;
 
-  int _currentStep = 0;
-  bool _isLoading = true; // Inicia true para carregar os dados existentes
+  int _currentStep = 0; // Se estiver editando, inicia direto na etapa 0 (Nível)
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -100,33 +64,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _loadExistingUserData();
   }
 
-  // Busca as informações gravadas no Supabase e preenche os campos
+  // Busca o nível e objetivo gravados no Supabase
   Future<void> _loadExistingUserData() async {
     try {
       final user = supabase.auth.currentUser;
       if (user != null) {
         final data = await supabase
             .from('profiles')
-            .select()
+            .select('level, goal')
             .eq('id', user.id)
             .maybeSingle();
 
         if (data != null && mounted) {
           setState(() {
-            _nameController.text = data['name'] ?? '';
-            _ageController.text = data['age'] != null
-                ? data['age'].toString()
-                : '';
-            _selectedGender = data['gender'] ?? 'Masculino';
-            _cpfController.text = data['cpf'] ?? '';
-            _selectedLevel =
-                data['level']; // Se for nulo, nada fica selecionado
-            _selectedGoal = data['goal']; // Se for nulo, nada fica selecionado
+            _selectedLevel = data['level'];
+            _selectedGoal = data['goal'];
           });
         }
       }
     } catch (e) {
-      debugPrint('Erro ao carregar dados do usuário: $e');
+      debugPrint('Erro ao carregar dados de metas: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -136,7 +93,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  Future<void> _saveProfileData() async {
+  Future<void> _saveGoalsData() async {
     setState(() {
       _isLoading = true;
     });
@@ -145,16 +102,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       final user = supabase.auth.currentUser;
 
       if (user != null) {
-        await supabase.from('profiles').upsert({
-          'id': user.id,
-          'name': _nameController.text.trim(),
-          'age': int.tryParse(_ageController.text.trim()) ?? 0,
-          'gender': _selectedGender,
-          'cpf': _cpfController.text.trim(),
-          'level': _selectedLevel,
-          'goal': _selectedGoal,
-          'updated_at': DateTime.now().toIso8601String(),
-        });
+        await supabase
+            .from('profiles')
+            .update({
+              'level': _selectedLevel,
+              'goal': _selectedGoal,
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('id', user.id);
       }
 
       if (!mounted) return;
@@ -195,7 +150,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       appBar: AppBar(
         title: Text(
           widget.isEditing
-              ? 'Editar Perfil e Objetivos'
+              ? 'Editar Nível e Objetivos'
               : 'Configuração Inicial',
         ),
         elevation: 0,
@@ -211,9 +166,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (_currentStep == 0) _buildPersonalInfoStep(textColor),
-                    if (_currentStep == 1) _buildLevelStep(textColor),
-                    if (_currentStep == 2) _buildGoalStep(textColor),
+                    if (_currentStep == 0) _buildLevelStep(textColor),
+                    if (_currentStep == 1) _buildGoalStep(textColor),
                     const SizedBox(height: 24),
 
                     Row(
@@ -240,10 +194,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               ? null
                               : () {
                                   if (_currentStep == 0) {
-                                    if (_formKey.currentState!.validate()) {
-                                      setState(() => _currentStep++);
-                                    }
-                                  } else if (_currentStep == 1) {
                                     if (_selectedLevel != null) {
                                       setState(() => _currentStep++);
                                     } else {
@@ -257,9 +207,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                         ),
                                       );
                                     }
-                                  } else if (_currentStep == 2) {
+                                  } else if (_currentStep == 1) {
                                     if (_selectedGoal != null) {
-                                      _saveProfileData();
+                                      _saveGoalsData();
                                     } else {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
@@ -273,7 +223,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                   }
                                 },
                           child: Text(
-                            _currentStep == 2 ? 'Concluir' : 'Avançar',
+                            _currentStep == 1 ? 'Concluir' : 'Avançar',
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
@@ -285,85 +235,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ],
                 ),
               ),
-      ),
-    );
-  }
-
-  Widget _buildPersonalInfoStep(Color textColor) {
-    return Form(
-      key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Dados Pessoais',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Nome Completo',
-              border: OutlineInputBorder(),
-            ),
-            validator: (v) =>
-                v == null || v.isEmpty ? 'Informe seu nome' : null,
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _ageController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Idade',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Informe a idade' : null,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: _selectedGender,
-                  decoration: const InputDecoration(
-                    labelText: 'Sexo',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: ['Masculino', 'Feminino', 'Outro'].map((g) {
-                    return DropdownMenuItem(value: g, child: Text(g));
-                  }).toList(),
-                  onChanged: (val) => setState(() => _selectedGender = val!),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _cpfController,
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              CpfInputFormatter(),
-            ],
-            decoration: const InputDecoration(
-              labelText: 'CPF',
-              hintText: '000.000.000-00',
-              border: OutlineInputBorder(),
-            ),
-            validator: (v) {
-              if (v == null || v.isEmpty) return 'Informe seu CPF';
-              if (v.length < 14) return 'CPF incompleto (000.000.000-00)';
-              return null;
-            },
-          ),
-        ],
       ),
     );
   }
