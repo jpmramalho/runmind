@@ -1,5 +1,5 @@
 {
-  "total_plans": 6,
+  "total_plans": 12,
   "plans": [
     {
       "id": "iniciante-5km",
@@ -61,6 +61,195 @@
           "intensity": "Baixa",
           "rpe": 3,
           "notes": "Objetivo é completar o tempo, não a velocidade."
+        }
+      ]
+    },
+    {
+      "id": "iniciante-10km",
+      "level": "Iniciante",
+      "goal": "10km",
+      "age": 30,
+      "gender": "Geral",
+      "plan_version": "1.0",
+      "weekly_summary": {
+        "total_sessions": 4,
+        "estimated_weekly_km": 25.0,
+        "focus": "Aumentar volume gradualmente para 10km"
+      },
+      "workouts": [
+        {
+          "day": "Segunda-feira",
+          "day_of_week": 1,
+          "type": "Fácil",
+          "title": "Corrida Fácil",
+          "description": "35 minutos em ritmo confortável.",
+          "duration_min": 35,
+          "distance_km": 5.0,
+          "intensity": "Baixa",
+          "rpe": 3,
+          "notes": "Construa base."
+        },
+        {
+          "day": "Quarta-feira",
+          "day_of_week": 3,
+          "type": "Fácil",
+          "title": "Trote Contínuo",
+          "description": "40 minutos fáceis.",
+          "duration_min": 40,
+          "distance_km": 6.0,
+          "intensity": "Baixa",
+          "rpe": 4,
+          "notes": "Mantenha conversação possível."
+        },
+        {
+          "day": "Sexta-feira",
+          "day_of_week": 5,
+          "type": "Intervalado",
+          "title": "Intervalos",
+          "description": "5 x (4 min trote + 2 min caminhada).",
+          "duration_min": 40,
+          "distance_km": 5.5,
+          "intensity": "Moderada",
+          "rpe": 5,
+          "notes": "Esforço moderado."
+        },
+        {
+          "day": "Domingo",
+          "day_of_week": 7,
+          "type": "Longo",
+          "title": "Longão",
+          "description": "50 a 55 minutos fáceis.",
+          "duration_min": 55,
+          "distance_km": 8.0,
+          "intensity": "Baixa",
+          "rpe": 3,
+          "notes": "Objetivo é o tempo, não a velocidade."
+        }
+      ]
+    },
+    {
+      "id": "iniciante-meia",
+      "level": "Iniciante",
+      "goal": "Meia Maratona",
+      "age": 30,
+      "gender": "Geral",
+      "plan_version": "1.0",
+      "weekly_summary": {
+        "total_sessions": 4,
+        "estimated_weekly_km": 30.0,
+        "focus": "Construir resistência progressiva para 21km"
+      },
+      "workouts": [
+        {
+          "day": "Segunda-feira",
+          "day_of_week": 1,
+          "type": "Fácil",
+          "title": "Base Aeróbica",
+          "description": "40 minutos em ritmo confortável.",
+          "duration_min": 40,
+          "distance_km": 6.0,
+          "intensity": "Baixa",
+          "rpe": 3,
+          "notes": "Ritmo conversacional."
+        },
+        {
+          "day": "Quarta-feira",
+          "day_of_week": 3,
+          "type": "Fácil",
+          "title": "Corrida Contínua",
+          "description": "45 minutos fáceis.",
+          "duration_min": 45,
+          "distance_km": 7.0,
+          "intensity": "Baixa",
+          "rpe": 4,
+          "notes": "Mantenha o esforço controlado."
+        },
+        {
+          "day": "Sexta-feira",
+          "day_of_week": 5,
+          "type": "Intervalado",
+          "title": "Intervalos Leves",
+          "description": "5 x (5 min trote + 2 min caminhada).",
+          "duration_min": 45,
+          "distance_km": 7.0,
+          "intensity": "Moderada",
+          "rpe": 5,
+          "notes": "Foque na consistência."
+        },
+        {
+          "day": "Domingo",
+          "day_of_week": 7,
+          "type": "Longo",
+          "title": "Longão Progressivo",
+          "description": "60 a 70 minutos em ritmo fácil.",
+          "duration_min": 65,
+          "distance_km": 10.0,
+          "intensity": "Baixa",
+          "rpe": 3,
+          "notes": "Aumente o volume gradualmente."
+        }
+      ]
+    },
+    {
+      "id": "iniciante-maratona",
+      "level": "Iniciante",
+      "goal": "Maratona",
+      "age": 30,
+      "gender": "Geral",
+      "plan_version": "1.0",
+      "weekly_summary": {
+        "total_sessions": 4,
+        "estimated_weekly_km": 35.0,
+        "focus": "Construir volume de forma segura para 42km"
+      },
+      "workouts": [
+        {
+          "day": "Segunda-feira",
+          "day_of_week": 1,
+          "type": "Fácil",
+          "title": "Base Aeróbica",
+          "description": "45 minutos em ritmo confortável.",
+          "duration_min": 45,
+          "distance_km": 7.0,
+          "intensity": "Baixa",
+          "rpe": 3,
+          "notes": "Ritmo conversacional."
+        },
+        {
+          "day": "Quarta-feira",
+          "day_of_week": 3,
+          "type": "Fácil",
+          "title": "Corrida Contínua",
+          "description": "50 minutos fáceis.",
+          "duration_min": 50,
+          "distance_km": 8.0,
+          "intensity": "Baixa",
+          "rpe": 4,
+          "notes": "Mantenha o esforço controlado."
+        },
+        {
+          "day": "Sexta-feira",
+          "day_of_week": 5,
+          "type": "Intervalado",
+          "title": "Intervalos Leves",
+          "description": "6 x (4 min trote + 2 min caminhada).",
+          "duration_min": 50,
+          "distance_km": 8.0,
+          "intensity": "Moderada",
+          "rpe": 5,
+          "notes": "Foque na consistência."
+        },
+        {
+          "day": "Domingo",
+          "day_of_week": 7,
+          "type": "Longo",
+          "title": "Longão",
+          "description": "75 a 85 minutos em ritmo fácil.",
+          "duration_min": 80,
+          "distance_km": 12.0,
+          "intensity": "Baixa",
+          "rpe": 3,
+          "notes": "Priorize completar o tempo."
         }
       ]
     },
@@ -136,6 +325,231 @@
           "intensity": "Baixa",
           "rpe": 1,
           "notes": "Priorize recuperação."
+        }
+      ]
+    },
+    {
+      "id": "intermediario-10km",
+      "level": "Intermediário",
+      "goal": "10km",
+      "age": 30,
+      "gender": "Geral",
+      "plan_version": "1.0",
+      "weekly_summary": {
+        "total_sessions": 5,
+        "estimated_weekly_km": 35.0,
+        "focus": "Melhorar performance nos 10km"
+      },
+      "workouts": [
+        {
+          "day": "Segunda-feira",
+          "day_of_week": 1,
+          "type": "Fácil",
+          "title": "Base",
+          "description": "45 minutos fáceis.",
+          "duration_min": 45,
+          "distance_km": 7.5,
+          "intensity": "Baixa",
+          "rpe": 3,
+          "notes": "Ritmo conversacional."
+        },
+        {
+          "day": "Quarta-feira",
+          "day_of_week": 3,
+          "type": "Intervalado",
+          "title": "Velocidade",
+          "description": "Aquecimento + 5 x 800m fortes + desaquecimento.",
+          "duration_min": 50,
+          "distance_km": 8.0,
+          "intensity": "Alta",
+          "rpe": 7,
+          "notes": "Recupere bem entre as séries."
+        },
+        {
+          "day": "Sexta-feira",
+          "day_of_week": 5,
+          "type": "Ritmo",
+          "title": "Ritmo de 10km",
+          "description": "20 min fácil + 20 min em ritmo de prova + 10 min fácil.",
+          "duration_min": 50,
+          "distance_km": 9.0,
+          "intensity": "Moderada",
+          "rpe": 6,
+          "notes": "Sinta o ritmo de prova."
+        },
+        {
+          "day": "Sábado",
+          "day_of_week": 6,
+          "type": "Longo",
+          "title": "Longão",
+          "description": "65 a 70 minutos confortáveis.",
+          "duration_min": 70,
+          "distance_km": 11.0,
+          "intensity": "Baixa",
+          "rpe": 4,
+          "notes": "Construa resistência."
+        },
+        {
+          "day": "Domingo",
+          "day_of_week": 7,
+          "type": "Descanso",
+          "title": "Recuperação",
+          "description": "Descanso ou caminhada leve.",
+          "duration_min": 0,
+          "distance_km": 0.0,
+          "intensity": "Baixa",
+          "rpe": 1,
+          "notes": "Recupere bem."
+        }
+      ]
+    },
+    {
+      "id": "intermediario-meia",
+      "level": "Intermediário",
+      "goal": "Meia Maratona",
+      "age": 30,
+      "gender": "Geral",
+      "plan_version": "1.0",
+      "weekly_summary": {
+        "total_sessions": 5,
+        "estimated_weekly_km": 42.0,
+        "focus": "Preparação específica para 21km"
+      },
+      "workouts": [
+        {
+          "day": "Segunda-feira",
+          "day_of_week": 1,
+          "type": "Fácil",
+          "title": "Base Aeróbica",
+          "description": "50 minutos fáceis.",
+          "duration_min": 50,
+          "distance_km": 8.5,
+          "intensity": "Baixa",
+          "rpe": 3,
+          "notes": "Ritmo conversacional."
+        },
+        {
+          "day": "Quarta-feira",
+          "day_of_week": 3,
+          "type": "Intervalado",
+          "title": "Velocidade",
+          "description": "Aquecimento + 6 x 800m + desaquecimento.",
+          "duration_min": 55,
+          "distance_km": 9.0,
+          "intensity": "Alta",
+          "rpe": 7,
+          "notes": "Mantenha qualidade."
+        },
+        {
+          "day": "Sexta-feira",
+          "day_of_week": 5,
+          "type": "Ritmo",
+          "title": "Ritmo de Meia",
+          "description": "20 min fácil + 25 min em ritmo de prova + 10 min fácil.",
+          "duration_min": 55,
+          "distance_km": 10.0,
+          "intensity": "Moderada",
+          "rpe": 6,
+          "notes": "Sinta o ritmo de prova."
+        },
+        {
+          "day": "Sábado",
+          "day_of_week": 6,
+          "type": "Longo",
+          "title": "Longão",
+          "description": "80 a 90 minutos confortáveis.",
+          "duration_min": 85,
+          "distance_km": 14.0,
+          "intensity": "Baixa",
+          "rpe": 4,
+          "notes": "Construa resistência."
+        },
+        {
+          "day": "Domingo",
+          "day_of_week": 7,
+          "type": "Descanso",
+          "title": "Recuperação",
+          "description": "Descanso total.",
+          "duration_min": 0,
+          "distance_km": 0.0,
+          "intensity": "Baixa",
+          "rpe": 1,
+          "notes": "Recupere bem."
+        }
+      ]
+    },
+    {
+      "id": "intermediario-maratona",
+      "level": "Intermediário",
+      "goal": "Maratona",
+      "age": 30,
+      "gender": "Geral",
+      "plan_version": "1.0",
+      "weekly_summary": {
+        "total_sessions": 5,
+        "estimated_weekly_km": 50.0,
+        "focus": "Preparação para 42km"
+      },
+      "workouts": [
+        {
+          "day": "Segunda-feira",
+          "day_of_week": 1,
+          "type": "Fácil",
+          "title": "Base Aeróbica",
+          "description": "55 minutos fáceis.",
+          "duration_min": 55,
+          "distance_km": 9.5,
+          "intensity": "Baixa",
+          "rpe": 3,
+          "notes": "Ritmo conversacional."
+        },
+        {
+          "day": "Quarta-feira",
+          "day_of_week": 3,
+          "type": "Intervalado",
+          "title": "Velocidade",
+          "description": "Aquecimento + 5 x 1000m + desaquecimento.",
+          "duration_min": 60,
+          "distance_km": 10.0,
+          "intensity": "Alta",
+          "rpe": 7,
+          "notes": "Mantenha qualidade."
+        },
+        {
+          "day": "Sexta-feira",
+          "day_of_week": 5,
+          "type": "Ritmo",
+          "title": "Ritmo de Maratona",
+          "description": "20 min fácil + 30 min em ritmo de prova + 10 min fácil.",
+          "duration_min": 60,
+          "distance_km": 11.0,
+          "intensity": "Moderada",
+          "rpe": 6,
+          "notes": "Sinta o ritmo de prova."
+        },
+        {
+          "day": "Sábado",
+          "day_of_week": 6,
+          "type": "Longo",
+          "title": "Longão",
+          "description": "100 a 110 minutos confortáveis.",
+          "duration_min": 105,
+          "distance_km": 17.0,
+          "intensity": "Baixa",
+          "rpe": 4,
+          "notes": "Construa resistência."
+        },
+        {
+          "day": "Domingo",
+          "day_of_week": 7,
+          "type": "Descanso",
+          "title": "Recuperação",
+          "description": "Descanso total.",
+          "duration_min": 0,
+          "distance_km": 0.0,
+          "intensity": "Baixa",
+          "rpe": 1,
+          "notes": "Recupere bem."
         }
       ]
     },
@@ -227,144 +641,6 @@
       ]
     },
     {
-      "id": "iniciante-10km",
-      "level": "Iniciante",
-      "goal": "10km",
-      "age": 30,
-      "gender": "Geral",
-      "plan_version": "1.0",
-      "weekly_summary": {
-        "total_sessions": 4,
-        "estimated_weekly_km": 25.0,
-        "focus": "Aumentar volume gradualmente para 10km"
-      },
-      "workouts": [
-        {
-          "day": "Segunda-feira",
-          "day_of_week": 1,
-          "type": "Fácil",
-          "title": "Corrida Fácil",
-          "description": "35 minutos em ritmo confortável.",
-          "duration_min": 35,
-          "distance_km": 5.0,
-          "intensity": "Baixa",
-          "rpe": 3,
-          "notes": "Construa base."
-        },
-        {
-          "day": "Quarta-feira",
-          "day_of_week": 3,
-          "type": "Fácil",
-          "title": "Trote Contínuo",
-          "description": "40 minutos fáceis.",
-          "duration_min": 40,
-          "distance_km": 6.0,
-          "intensity": "Baixa",
-          "rpe": 4,
-          "notes": "Mantenha conversação possível."
-        },
-        {
-          "day": "Sexta-feira",
-          "day_of_week": 5,
-          "type": "Intervalado",
-          "title": "Intervalos",
-          "description": "5 x (4 min trote + 2 min caminhada).",
-          "duration_min": 40,
-          "distance_km": 5.5,
-          "intensity": "Moderada",
-          "rpe": 5,
-          "notes": "Esforço moderado."
-        },
-        {
-          "day": "Domingo",
-          "day_of_week": 7,
-          "type": "Longo",
-          "title": "Longão",
-          "description": "50 a 55 minutos fáceis.",
-          "duration_min": 55,
-          "distance_km": 8.0,
-          "intensity": "Baixa",
-          "rpe": 3,
-          "notes": "Objetivo é o tempo, não a velocidade."
-        }
-      ]
-    },
-    {
-      "id": "intermediario-10km",
-      "level": "Intermediário",
-      "goal": "10km",
-      "age": 30,
-      "gender": "Geral",
-      "plan_version": "1.0",
-      "weekly_summary": {
-        "total_sessions": 5,
-        "estimated_weekly_km": 35.0,
-        "focus": "Melhorar performance nos 10km"
-      },
-      "workouts": [
-        {
-          "day": "Segunda-feira",
-          "day_of_week": 1,
-          "type": "Fácil",
-          "title": "Base",
-          "description": "45 minutos fáceis.",
-          "duration_min": 45,
-          "distance_km": 7.5,
-          "intensity": "Baixa",
-          "rpe": 3,
-          "notes": "Ritmo conversacional."
-        },
-        {
-          "day": "Quarta-feira",
-          "day_of_week": 3,
-          "type": "Intervalado",
-          "title": "Velocidade",
-          "description": "Aquecimento + 5 x 800m fortes + desaquecimento.",
-          "duration_min": 50,
-          "distance_km": 8.0,
-          "intensity": "Alta",
-          "rpe": 7,
-          "notes": "Recupere bem entre as séries."
-        },
-        {
-          "day": "Sexta-feira",
-          "day_of_week": 5,
-          "type": "Ritmo",
-          "title": "Ritmo de 10km",
-          "description": "20 min fácil + 20 min em ritmo de prova + 10 min fácil.",
-          "duration_min": 50,
-          "distance_km": 9.0,
-          "intensity": "Moderada",
-          "rpe": 6,
-          "notes": "Sinta o ritmo de prova."
-        },
-        {
-          "day": "Sábado",
-          "day_of_week": 6,
-          "type": "Longo",
-          "title": "Longão",
-          "description": "65 a 70 minutos confortáveis.",
-          "duration_min": 70,
-          "distance_km": 11.0,
-          "intensity": "Baixa",
-          "rpe": 4,
-          "notes": "Construa resistência."
-        },
-        {
-          "day": "Domingo",
-          "day_of_week": 7,
-          "type": "Descanso",
-          "title": "Recuperação",
-          "description": "Descanso ou caminhada leve.",
-          "duration_min": 0,
-          "distance_km": 0.0,
-          "intensity": "Baixa",
-          "rpe": 1,
-          "notes": "Recupere bem."
-        }
-      ]
-    },
-    {
       "id": "avancado-10km",
       "level": "Avançado",
       "goal": "10km",
@@ -433,6 +709,180 @@
           "description": "80 a 85 minutos progressivos.",
           "duration_min": 85,
           "distance_km": 14.0,
+          "intensity": "Moderada",
+          "rpe": 5,
+          "notes": "Terminar um pouco mais forte."
+        },
+        {
+          "day": "Domingo",
+          "day_of_week": 7,
+          "type": "Descanso",
+          "title": "Recuperação",
+          "description": "Descanso total.",
+          "duration_min": 0,
+          "distance_km": 0.0,
+          "intensity": "Baixa",
+          "rpe": 1,
+          "notes": "Recupere bem."
+        }
+      ]
+    },
+    {
+      "id": "avancado-meia",
+      "level": "Avançado",
+      "goal": "Meia Maratona",
+      "age": 30,
+      "gender": "Geral",
+      "plan_version": "1.0",
+      "weekly_summary": {
+        "total_sessions": 6,
+        "estimated_weekly_km": 55.0,
+        "focus": "Performance na Meia Maratona"
+      },
+      "workouts": [
+        {
+          "day": "Segunda-feira",
+          "day_of_week": 1,
+          "type": "Fácil",
+          "title": "Base Aeróbica",
+          "description": "60 minutos fáceis.",
+          "duration_min": 60,
+          "distance_km": 10.5,
+          "intensity": "Baixa",
+          "rpe": 3,
+          "notes": "Volume de qualidade."
+        },
+        {
+          "day": "Terça-feira",
+          "day_of_week": 2,
+          "type": "Intervalado",
+          "title": "Velocidade",
+          "description": "Aquecimento + 5 x 1000m + desaquecimento.",
+          "duration_min": 65,
+          "distance_km": 11.0,
+          "intensity": "Alta",
+          "rpe": 8,
+          "notes": "Mantenha qualidade."
+        },
+        {
+          "day": "Quarta-feira",
+          "day_of_week": 3,
+          "type": "Recuperação",
+          "title": "Recuperação",
+          "description": "40 minutos bem leves.",
+          "duration_min": 40,
+          "distance_km": 7.0,
+          "intensity": "Baixa",
+          "rpe": 2,
+          "notes": "Recuperação ativa."
+        },
+        {
+          "day": "Quinta-feira",
+          "day_of_week": 4,
+          "type": "Ritmo",
+          "title": "Ritmo de Meia",
+          "description": "Aquecimento + 3 x 15 min em ritmo de prova.",
+          "duration_min": 70,
+          "distance_km": 13.0,
+          "intensity": "Moderada",
+          "rpe": 7,
+          "notes": "Esforço firme e sustentável."
+        },
+        {
+          "day": "Sábado",
+          "day_of_week": 6,
+          "type": "Longo",
+          "title": "Longão",
+          "description": "100 a 110 minutos progressivos.",
+          "duration_min": 105,
+          "distance_km": 18.0,
+          "intensity": "Moderada",
+          "rpe": 5,
+          "notes": "Terminar um pouco mais forte."
+        },
+        {
+          "day": "Domingo",
+          "day_of_week": 7,
+          "type": "Descanso",
+          "title": "Recuperação",
+          "description": "Descanso total.",
+          "duration_min": 0,
+          "distance_km": 0.0,
+          "intensity": "Baixa",
+          "rpe": 1,
+          "notes": "Recupere bem."
+        }
+      ]
+    },
+    {
+      "id": "avancado-maratona",
+      "level": "Avançado",
+      "goal": "Maratona",
+      "age": 30,
+      "gender": "Geral",
+      "plan_version": "1.0",
+      "weekly_summary": {
+        "total_sessions": 6,
+        "estimated_weekly_km": 65.0,
+        "focus": "Performance na Maratona"
+      },
+      "workouts": [
+        {
+          "day": "Segunda-feira",
+          "day_of_week": 1,
+          "type": "Fácil",
+          "title": "Base Aeróbica",
+          "description": "65 minutos fáceis.",
+          "duration_min": 65,
+          "distance_km": 11.5,
+          "intensity": "Baixa",
+          "rpe": 3,
+          "notes": "Volume de qualidade."
+        },
+        {
+          "day": "Terça-feira",
+          "day_of_week": 2,
+          "type": "Intervalado",
+          "title": "Velocidade",
+          "description": "Aquecimento + 6 x 1000m + desaquecimento.",
+          "duration_min": 70,
+          "distance_km": 12.0,
+          "intensity": "Alta",
+          "rpe": 8,
+          "notes": "Mantenha qualidade."
+        },
+        {
+          "day": "Quarta-feira",
+          "day_of_week": 3,
+          "type": "Recuperação",
+          "title": "Recuperação",
+          "description": "45 minutos bem leves.",
+          "duration_min": 45,
+          "distance_km": 8.0,
+          "intensity": "Baixa",
+          "rpe": 2,
+          "notes": "Recuperação ativa."
+        },
+        {
+          "day": "Quinta-feira",
+          "day_of_week": 4,
+          "type": "Ritmo",
+          "title": "Ritmo de Maratona",
+          "description": "Aquecimento + 3 x 20 min em ritmo de prova.",
+          "duration_min": 80,
+          "distance_km": 15.0,
+          "intensity": "Moderada",
+          "rpe": 7,
+          "notes": "Esforço firme e sustentável."
+        },
+        {
+          "day": "Sábado",
+          "day_of_week": 6,
+          "type": "Longo",
+          "title": "Longão",
+          "description": "120 a 140 minutos progressivos.",
+          "duration_min": 130,
+          "distance_km": 22.0,
           "intensity": "Moderada",
           "rpe": 5,
           "notes": "Terminar um pouco mais forte."
