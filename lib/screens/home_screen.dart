@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../main.dart';
@@ -238,6 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 20),
 
+              // Calendário da semana
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -301,6 +304,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 24),
 
+              // Lista de treinos do dia
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -341,11 +345,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                   : 'Corredor';
 
                               if (context.mounted) {
-                                _openWorkoutDetail(
+                                Navigator.push(
                                   context,
-                                  userName: firstName,
-                                  workoutData: workout,
-                                  isRestDay: isRestDay,
+                                  MaterialPageRoute(
+                                    builder: (context) => WorkoutDetailScreen(
+                                      userName: firstName,
+                                      workoutData: workout,
+                                      isRestDay: isRestDay,
+                                    ),
+                                  ),
                                 );
                               }
                             },
@@ -538,25 +546,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  void _openWorkoutDetail(
-    BuildContext context, {
-    required String userName,
-    required Map<String, dynamic> workoutData,
-    required bool isRestDay,
-  }) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => WorkoutDetailScreen(
-          userName: userName,
-          workoutData: workoutData,
-          isRestDay: isRestDay,
-        ),
-      ),
-    );
-  }
 }
+
+// ============================================================
+// TELA DE DETALHE DO TREINO COM TIMER
+// ============================================================
 
 class WorkoutDetailScreen extends StatefulWidget {
   final String userName;
@@ -576,6 +570,77 @@ class WorkoutDetailScreen extends StatefulWidget {
 
 class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
   int _selectedTab = 0; // 0: Ar livre, 1: Esteira, 2: Zonas de ritmo
+
+  // === CONTROLE DO TIMER ===
+  bool _isRunning = false;
+  bool _isFinished = false;
+  int _seconds = 0;
+  Timer? _timer;
+  String _realizedTime = '-';
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    setState(() {
+      _isRunning = true;
+      _isFinished = false;
+      _seconds = 0;
+    });
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _seconds++;
+        });
+      }
+    });
+  }
+
+  Future<void> _stopTimer() async {
+    _timer?.cancel();
+
+    final minutes = (_seconds ~/ 60).toString().padLeft(2, '0');
+    final secs = (_seconds % 60).toString().padLeft(2, '0');
+    final timeString = '$minutes:$secs';
+
+    setState(() {
+      _isRunning = false;
+      _isFinished = true;
+      _realizedTime = timeString;
+    });
+
+    // Tenta salvar no banco
+    try {
+      final workoutId = widget.workoutData['id'];
+      if (workoutId != null) {
+        await supabase
+            .from('workouts')
+            .update({'is_completed': true})
+            .eq('id', workoutId);
+      }
+    } catch (e) {
+      debugPrint('Erro ao salvar tempo realizado: $e');
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Treino finalizado! Tempo: $timeString'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  String get _formattedTime {
+    final minutes = (_seconds ~/ 60).toString().padLeft(2, '0');
+    final secs = (_seconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$secs';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -605,7 +670,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- 1. CABEÇALHO DO TREINO (NOVA IMAGEM) ---
+            // --- 1. CABEÇALHO DO TREINO ---
             Text(
               widget.workoutData['title'] ?? 'Rodagem Contínua',
               style: TextStyle(
@@ -626,7 +691,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
             ),
             const SizedBox(height: 18),
 
-            // --- 2. CHIPS DE MÉTRICAS (TEMPO, DISTÂNCIA, CARGA ZP) ---
+            // --- 2. CHIPS DE MÉTRICAS ---
             Row(
               children: [
                 _buildMetricChip(
@@ -654,9 +719,43 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
 
-            // --- 3. SEÇÃO DESCRIÇÃO (TEXTO EXPLICATIVO PERSONALIZADO) ---
+            // === CRONÔMETRO (aparece quando inicia) ===
+            if (_isRunning || _isFinished)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: cardBgColor,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      _isFinished ? 'Tempo Realizado' : 'Tempo em andamento',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _isFinished ? _realizedTime : _formattedTime,
+                      style: TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        color: _isFinished
+                            ? Colors.green
+                            : const Color(0xFFFF2D55),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // --- 3. SEÇÃO DESCRIÇÃO ---
             Text(
               'Descrição',
               style: TextStyle(
@@ -709,7 +808,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
             ),
             const SizedBox(height: 32),
 
-            // --- 4. ESTRUTURA DO TREINO (ABAS AR LIVRE / ESTEIRA / ZONAS) ---
+            // --- 4. ESTRUTURA DO TREINO ---
             Text(
               'Estrutura do treino',
               style: TextStyle(
@@ -720,7 +819,6 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
             ),
             const SizedBox(height: 14),
 
-            // Alternador (Segmented Control)
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
@@ -739,7 +837,6 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Card da Corrida Contínua / Variação de Pace
             Row(
               children: [
                 const Icon(
@@ -782,7 +879,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
             ),
             const SizedBox(height: 32),
 
-            // --- 5. DADOS DO TREINO (TABELA PLANEJADO VS REALIZADO) ---
+            // --- 5. DADOS DO TREINO ---
             Text(
               'Dados do treino',
               style: TextStyle(
@@ -832,7 +929,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                   _buildTableRow(
                     'Duração',
                     widget.workoutData['duration'] ?? '30:00',
-                    '-',
+                    _isFinished ? _realizedTime : '-',
                     textColor,
                   ),
                   const SizedBox(height: 16),
@@ -862,31 +959,48 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
             ),
             const SizedBox(height: 28),
 
-            // --- 6. BOTÃO DE AÇÃO (INICIAR TREINO / REGISTRAR DESCANSO) ---
+            // --- 6. BOTÃO INICIAR / FINALIZAR ---
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        widget.isRestDay
-                            ? 'Dia de descanso registrado!'
-                            : 'Treino iniciado! Boa corrida!',
-                      ),
-                      backgroundColor: const Color(0xFFFF2D55),
-                    ),
-                  );
-                },
+                onPressed: widget.isRestDay
+                    ? () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Dia de descanso registrado!'),
+                            backgroundColor: Color(0xFFFF2D55),
+                          ),
+                        );
+                      }
+                    : _isFinished
+                    ? null
+                    : () {
+                        if (_isRunning) {
+                          _stopTimer();
+                        } else {
+                          _startTimer();
+                        }
+                      },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF2D55),
+                  backgroundColor: _isRunning
+                      ? Colors.orange
+                      : _isFinished
+                      ? Colors.green
+                      : const Color(0xFFFF2D55),
+                  disabledBackgroundColor: Colors.green,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(25),
                   ),
                 ),
                 child: Text(
-                  widget.isRestDay ? 'Registrar Descanso' : 'Iniciar Treino',
+                  widget.isRestDay
+                      ? 'Registrar Descanso'
+                      : _isFinished
+                      ? 'Treino Finalizado ✓'
+                      : _isRunning
+                      ? 'Finalizar Treino'
+                      : 'Iniciar Treino',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -918,7 +1032,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: iconColor),
+          Icon(icon, size: 16, color: iconColor),
           const SizedBox(width: 6),
           Text(
             text,
@@ -933,41 +1047,28 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
     );
   }
 
-  Widget _buildTabOption(String text, int index, bool isLight) {
+  Widget _buildTabOption(String title, int index, bool isLight) {
     final isSelected = _selectedTab == index;
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedTab = index;
-          });
-        },
+        onTap: () => setState(() => _selectedTab = index),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color: isSelected
-                ? (isLight ? Colors.white : const Color(0xFF383842))
+                ? (isLight ? Colors.white : const Color(0xFF3A3A42))
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: isSelected && isLight
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
+            borderRadius: BorderRadius.circular(25),
           ),
           child: Text(
-            text,
+            title,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               color: isSelected
                   ? (isLight ? Colors.black : Colors.white)
-                  : (isLight ? Colors.grey.shade600 : Colors.grey.shade400),
+                  : Colors.grey.shade500,
             ),
           ),
         ),
@@ -976,9 +1077,9 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
   }
 
   Widget _buildTableRow(
-    String title,
+    String label,
     String planned,
-    String executed,
+    String actual,
     Color textColor, {
     bool showInfoIcon = false,
   }) {
@@ -989,7 +1090,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
           child: Row(
             children: [
               Text(
-                title,
+                label,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -1018,12 +1119,12 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
         Expanded(
           flex: 2,
           child: Text(
-            executed,
+            actual,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey.shade500,
+              color: actual != '-' ? Colors.green : Colors.grey.shade500,
+              fontWeight: actual != '-' ? FontWeight.bold : FontWeight.normal,
             ),
           ),
         ),
