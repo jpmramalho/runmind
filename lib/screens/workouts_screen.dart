@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../main.dart';
 
-class WorkoutScreen extends StatefulWidget {
-  const WorkoutScreen({super.key});
+class WorkoutsScreen extends StatefulWidget {
+  const WorkoutsScreen({super.key});
 
   @override
-  State<WorkoutScreen> createState() => _WorkoutScreenState();
+  State<WorkoutsScreen> createState() => _WorkoutsScreenState();
 }
 
-class _WorkoutScreenState extends State<WorkoutScreen> {
+class _WorkoutsScreenState extends State<WorkoutsScreen> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _workouts = [];
 
@@ -19,7 +19,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     _fetchWorkouts();
   }
 
-  // Busca os treinos atualizados do Supabase
   Future<void> _fetchWorkouts() async {
     setState(() => _isLoading = true);
     try {
@@ -31,7 +30,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             .eq('user_id', user.id)
             .order('created_at', ascending: true);
 
-        if (data != null && mounted) {
+        if (mounted) {
           setState(() {
             _workouts = List<Map<String, dynamic>>.from(data);
           });
@@ -46,7 +45,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     }
   }
 
-  // Alterna o status de concluído do treino
   Future<void> _toggleWorkoutCompletion(Map<String, dynamic> workout) async {
     final bool currentStatus = workout['is_completed'] ?? false;
     final bool newStatus = !currentStatus;
@@ -61,7 +59,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           .update({'is_completed': newStatus})
           .eq('id', workout['id']);
     } catch (e) {
-      // Reverte em caso de erro
       setState(() {
         workout['is_completed'] = currentStatus;
       });
@@ -110,13 +107,33 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
               ? Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24.0),
-                    child: Text(
-                      'Nenhum treino gerado ainda.\nAtualize seu nível no perfil para criar um plano semanal!',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.grey.shade500,
-                        fontSize: 16,
-                      ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.directions_run,
+                          size: 64,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Nenhum treino gerado ainda',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Vá em Perfil → Editar Nível e Objetivos\npara criar seu plano semanal.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 )

@@ -16,10 +16,9 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  // Removido o const para permitir instanciar as telas dinamicamente
   final List<Widget> _screens = [
     const HomeScreen(),
-    const WorkoutScreen(), // Alinhado com a classe WorkoutScreen do arquivo workouts_screen.dart
+    const WorkoutsScreen(),
     const ProgressScreen(),
     const CommunityScreen(),
     const ProfileScreen(),
@@ -39,8 +38,6 @@ class _MainScreenState extends State<MainScreen> {
           });
         },
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFFFF2D55),
-        unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
@@ -53,9 +50,9 @@ class _MainScreenState extends State<MainScreen> {
             label: 'Treinos',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.show_chart_outlined),
-            activeIcon: Icon(Icons.show_chart),
-            label: 'Evolução',
+            icon: Icon(Icons.bar_chart_outlined),
+            activeIcon: Icon(Icons.bar_chart),
+            label: 'Progresso',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.people_outline),

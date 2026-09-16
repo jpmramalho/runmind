@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -48,6 +51,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Selecione um nível e um objetivo para continuar.'),
+          backgroundColor: Colors.orange,
         ),
       );
       return;
@@ -59,7 +63,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Busca a idade do perfil do usuário
+      // 1. Busca idade do perfil
       final profileResponse = await supabase
           .from('profiles')
           .select('age')
@@ -68,7 +72,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       final int userAge = profileResponse?['age'] ?? 25;
 
-      // 2. Atualiza Nível e Objetivo no Perfil
+      // 2. Atualiza nível e objetivo no perfil
       await supabase
           .from('profiles')
           .update({
@@ -78,8 +82,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           })
           .eq('id', user.id);
 
-      // 3. Remove os treinos antigos e busca o novo plano no Supabase
+      // 3. Remove treinos antigos
       await supabase.from('workouts').delete().eq('user_id', user.id);
+
+      // 4. Carrega o plano (primeiro tenta Supabase, depois JSON local)
+      List<Map<String, dynamic>> items = [];
 
       final templateResponse = await supabase
           .from('workout_templates')
@@ -90,37 +97,59 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       if (templateResponse != null &&
           templateResponse['workout_template_items'] != null) {
-        final List items = templateResponse['workout_template_items'];
-
-        final newWorkouts = items.map((item) {
-          String customDescription =
-              '${item['description']} (Foco: $_selectedGoal)';
-
-          if (userAge >= 45) {
-            customDescription +=
-                ' - *Atenção reforçada ao aquecimento e recuperação.*';
-          }
-
-          return {
-            'user_id': user.id,
-            'title': item['title'],
-            'description': customDescription,
-            'day': item['day'],
-            'day_of_week': item['day_of_week'],
-            'duration_min': item['duration_min'],
-            'distance_km': item['distance_km'],
-            'type': item['type'],
-            'intensity': item['intensity'],
-            'rpe': item['rpe'],
-            'is_completed': false,
-            'created_at': DateTime.now().toIso8601String(),
-          };
-        }).toList();
-
-        await supabase.from('workouts').insert(newWorkouts);
+        items = List<Map<String, dynamic>>.from(
+          templateResponse['workout_template_items'],
+        );
+      } else {
+        items = await _loadPlanFromLocalJson(_selectedLevel!, _selectedGoal!);
       }
 
+      if (items.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Nenhum plano encontrado para este nível e objetivo. Verifique o JSON.',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // 5. Prepara os novos treinos (apenas colunas mais básicas)
+      final newWorkouts = items.map((item) {
+        String customDescription =
+            '${item['description'] ?? ''} (Foco: $_selectedGoal)';
+
+        if (userAge >= 45) {
+          customDescription +=
+              ' - *Atenção reforçada ao aquecimento e recuperação.*';
+        }
+
+        return {
+          'user_id': user.id,
+          'title': item['title'] ?? 'Treino',
+          'description': customDescription,
+          'day': item['day'] ?? '',
+          'duration_min': item['duration_min'] ?? 0,
+          'is_completed': false,
+          'created_at': DateTime.now().toIso8601String(),
+        };
+      }).toList();
+
+      // 6. Insere os novos treinos
+      await supabase.from('workouts').insert(newWorkouts);
+
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Plano de treinos atualizado com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
         if (widget.isEditing) {
           Navigator.of(context).pop(true);
         } else {
@@ -130,12 +159,43 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     } catch (e) {
       debugPrint('Erro ao salvar plano: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Erro ao salvar plano: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao salvar plano: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  /// Carrega o plano a partir do JSON local
+  Future<List<Map<String, dynamic>>> _loadPlanFromLocalJson(
+    String level,
+    String goal,
+  ) async {
+    try {
+      final String jsonString = await rootBundle.loadString(
+        'assets/runmind_planos_completos.json',
+      );
+      final Map<String, dynamic> jsonData = json.decode(jsonString);
+
+      final List plans = jsonData['plans'] ?? [];
+
+      final plan = plans.firstWhere(
+        (p) => p['level'] == level && p['goal'] == goal,
+        orElse: () => null,
+      );
+
+      if (plan != null && plan['workouts'] != null) {
+        return List<Map<String, dynamic>>.from(plan['workouts']);
+      }
+    } catch (e) {
+      debugPrint('Erro ao carregar JSON local: $e');
+    }
+    return [];
   }
 
   @override
@@ -150,7 +210,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         centerTitle: true,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFFFF2D55)),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20.0),
               child: Column(
@@ -208,6 +270,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     height: 50,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF2D55),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -220,6 +283,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -233,9 +297,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _buildLevelOption(String title, String description, IconData icon) {
     final isSelected = _selectedLevel == title;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final primaryColor = const Color(0xFFFF2D55);
 
-    // Cores dinâmicas para alto contraste em Dark Mode
     final cardBgColor = isSelected
         ? (isDark
               ? primaryColor.withOpacity(0.25)
@@ -311,9 +374,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _buildGoalOption(String title, String description, IconData icon) {
     final isSelected = _selectedGoal == title;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final primaryColor = const Color(0xFFFF2D55);
 
-    // Cores dinâmicas para alto contraste em Dark Mode
     final cardBgColor = isSelected
         ? (isDark
               ? primaryColor.withOpacity(0.25)
