@@ -16,19 +16,18 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  // Lista de telas principais da aplicação
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    WorkoutsScreen(),
-    ProgressScreen(),
-    CommunityScreen(),
-    ProfileScreen(),
+  // Removido o const para permitir instanciar as telas dinamicamente
+  final List<Widget> _screens = [
+    const HomeScreen(),
+    const WorkoutScreen(), // Alinhado com a classe WorkoutScreen do arquivo workouts_screen.dart
+    const ProgressScreen(),
+    const CommunityScreen(),
+    const ProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isLight = theme.brightness == Brightness.light;
 
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _screens),
@@ -40,30 +39,32 @@ class _MainScreenState extends State<MainScreen> {
           });
         },
         type: BottomNavigationBarType.fixed,
-        backgroundColor: isLight ? Colors.white : const Color(0xFF1C1C22),
         selectedItemColor: const Color(0xFFFF2D55),
-        unselectedItemColor: Colors.grey.shade600,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
+        unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.fitness_center),
-            label: 'TREINOS', // Alterado conforme solicitado
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Início',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.format_list_bulleted),
-            label: 'Planos',
+            icon: Icon(Icons.fitness_center_outlined),
+            activeIcon: Icon(Icons.fitness_center),
+            label: 'Treinos',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.show_chart),
+            icon: Icon(Icons.show_chart_outlined),
+            activeIcon: Icon(Icons.show_chart),
             label: 'Evolução',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.people_outline),
+            activeIcon: Icon(Icons.people),
             label: 'Comunidade',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
             label: 'Perfil',
           ),
         ],

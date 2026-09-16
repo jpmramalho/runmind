@@ -1,26 +1,239 @@
 import 'package:flutter/material.dart';
 
-class WorkoutsScreen extends StatelessWidget {
-  const WorkoutsScreen({super.key});
+import '../main.dart';
+
+class WorkoutScreen extends StatefulWidget {
+  const WorkoutScreen({super.key});
+
+  @override
+  State<WorkoutScreen> createState() => _WorkoutScreenState();
+}
+
+class _WorkoutScreenState extends State<WorkoutScreen> {
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _workouts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchWorkouts();
+  }
+
+  // Busca os treinos atualizados do Supabase
+  Future<void> _fetchWorkouts() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = supabase.auth.currentUser;
+      if (user != null) {
+        final data = await supabase
+            .from('workouts')
+            .select()
+            .eq('user_id', user.id)
+            .order('created_at', ascending: true);
+
+        if (data != null && mounted) {
+          setState(() {
+            _workouts = List<Map<String, dynamic>>.from(data);
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Erro ao buscar treinos: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  // Alterna o status de concluído do treino
+  Future<void> _toggleWorkoutCompletion(Map<String, dynamic> workout) async {
+    final bool currentStatus = workout['is_completed'] ?? false;
+    final bool newStatus = !currentStatus;
+
+    setState(() {
+      workout['is_completed'] = newStatus;
+    });
+
+    try {
+      await supabase
+          .from('workouts')
+          .update({'is_completed': newStatus})
+          .eq('id', workout['id']);
+    } catch (e) {
+      // Reverte em caso de erro
+      setState(() {
+        workout['is_completed'] = currentStatus;
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao atualizar treino: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isLight = theme.brightness == Brightness.light;
+    final textColor = isLight ? Colors.black : Colors.white;
+    final cardBgColor = isLight ? Colors.white : const Color(0xFF1C1C22);
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Treinos'),
+        title: Text(
+          'Treinos Semanais',
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-      ),
-      body: Center(
-        child: Text(
-          'Lista de Treinos',
-          style: TextStyle(
-            fontSize: 18,
-            color: isDark ? Colors.white : Colors.black,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh, color: textColor),
+            onPressed: _fetchWorkouts,
           ),
+        ],
+      ),
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _fetchWorkouts,
+          color: const Color(0xFFFF2D55),
+          child: _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFFF2D55)),
+                )
+              : _workouts.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Text(
+                      'Nenhum treino gerado ainda.\nAtualize seu nível no perfil para criar um plano semanal!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: _workouts.length,
+                  itemBuilder: (context, index) {
+                    final workout = _workouts[index];
+                    final isCompleted = workout['is_completed'] ?? false;
+
+                    return Card(
+                      color: cardBgColor,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 8.0,
+                          horizontal: 4.0,
+                        ),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: isCompleted
+                                ? Colors.green.withOpacity(0.2)
+                                : const Color(0xFFFF2D55).withOpacity(0.15),
+                            child: Icon(
+                              isCompleted
+                                  ? Icons.check_circle
+                                  : Icons.directions_run,
+                              color: isCompleted
+                                  ? Colors.green
+                                  : const Color(0xFFFF2D55),
+                            ),
+                          ),
+                          title: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  workout['title'] ?? 'Treino',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: textColor,
+                                    decoration: isCompleted
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFF2D55)
+                                      .withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  workout['day'] ?? '',
+                                  style: const TextStyle(
+                                    color: Color(0xFFFF2D55),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 6.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  workout['description'] ?? '',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: isCompleted
+                                        ? Colors.grey
+                                        : textColor.withOpacity(0.8),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.timer_outlined,
+                                      size: 14,
+                                      color: Colors.grey,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${workout['duration_min'] ?? 0} min',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          trailing: Checkbox(
+                            activeColor: const Color(0xFFFF2D55),
+                            value: isCompleted,
+                            onChanged: (value) =>
+                                _toggleWorkoutCompletion(workout),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/workout_templates.dart';
 import '../main.dart';
 import 'main_screen.dart';
 
@@ -55,7 +56,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   ];
   String? _selectedGoal;
 
-  int _currentStep = 0; // Se estiver editando, inicia direto na etapa 0 (Nível)
+  int _currentStep = 0;
   bool _isLoading = true;
 
   @override
@@ -64,7 +65,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _loadExistingUserData();
   }
 
-  // Busca o nível e objetivo gravados no Supabase
   Future<void> _loadExistingUserData() async {
     try {
       final user = supabase.auth.currentUser;
@@ -93,7 +93,53 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  Future<void> _saveGoalsData() async {
+  Future<void> _handleSaveFlow() async {
+    if (widget.isEditing) {
+      final bool? confirm = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Atualizar Plano de Treinos?'),
+            content: Text(
+              'Você alterou suas metas para o nível "$_selectedLevel". Deseja gerar um novo plano semanal de treinos com base nessa escolha?\n\n'
+              'Ao clicar em SIM, seu cronograma de treinos atual será substituído.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text(
+                  'NÃO (Manter atual)',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF2D55),
+                ),
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text(
+                  'SIM (Gerar novos)',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (confirm == true) {
+        await _saveGoalsAndGenerateWorkouts(generateNewWorkouts: true);
+      } else if (confirm == false) {
+        await _saveGoalsAndGenerateWorkouts(generateNewWorkouts: false);
+      }
+    } else {
+      await _saveGoalsAndGenerateWorkouts(generateNewWorkouts: true);
+    }
+  }
+
+  Future<void> _saveGoalsAndGenerateWorkouts({
+    required bool generateNewWorkouts,
+  }) async {
     setState(() {
       _isLoading = true;
     });
@@ -102,6 +148,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       final user = supabase.auth.currentUser;
 
       if (user != null) {
+        // 1. Busca idade e sexo salvos no perfil para adaptar os treinos
+        final profileResponse = await supabase
+            .from('profiles')
+            .select('age, gender')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        final int userAge = profileResponse?['age'] ?? 25;
+
+        // 2. Atualiza Nível e Objetivo no Perfil
         await supabase
             .from('profiles')
             .update({
@@ -110,9 +166,48 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               'updated_at': DateTime.now().toIso8601String(),
             })
             .eq('id', user.id);
+
+        // 3. Se confirmou a substituição (ou cadastro inicial), cria os novos treinos
+        if (generateNewWorkouts && _selectedLevel != null) {
+          await supabase.from('workouts').delete().eq('user_id', user.id);
+
+          final selectedTemplate =
+              WorkoutTemplates.templates[_selectedLevel] ?? [];
+          final newWorkouts = selectedTemplate.map((item) {
+            String customDescription =
+                '${item['description']} (Foco: $_selectedGoal)';
+
+            // Exemplo de adaptação fisiológica simples por idade
+            if (userAge >= 45) {
+              customDescription +=
+                  ' - *Atenção reforçada ao aquecimento e recuperação.*';
+            }
+
+            return {
+              'user_id': user.id,
+              'title': item['title'],
+              'description': customDescription,
+              'day': item['day'],
+              'duration_min': item['duration_min'],
+              'is_completed': false,
+              'created_at': DateTime.now().toIso8601String(),
+            };
+          }).toList();
+
+          if (newWorkouts.isNotEmpty) {
+            await supabase.from('workouts').insert(newWorkouts);
+          }
+        }
       }
 
       if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Configurações salvas com sucesso!'),
+          backgroundColor: Colors.green,
+        ),
+      );
 
       if (widget.isEditing) {
         Navigator.pop(context, true);
@@ -209,7 +304,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     }
                                   } else if (_currentStep == 1) {
                                     if (_selectedGoal != null) {
-                                      _saveGoalsData();
+                                      _handleSaveFlow();
                                     } else {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(

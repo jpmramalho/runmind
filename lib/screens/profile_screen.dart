@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../main.dart';
 import 'edit_personal_data_screen.dart';
 import 'history_screen.dart';
+import 'integrations_screen.dart';
 import 'onboarding_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -201,7 +202,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       Divider(height: 1, color: Colors.grey.shade800),
 
-                      // --- NOVO BOTÃO DE HISTÓRICO ---
                       ListTile(
                         leading: const Icon(
                           Icons.history,
@@ -227,6 +227,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => const HistoryScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      Divider(height: 1, color: Colors.grey.shade800),
+
+                      // --- NOVO BOTÃO DE INTEGRAÇÕES ---
+                      ListTile(
+                        leading: const Icon(
+                          Icons.link,
+                          color: Color(0xFFFF2D55),
+                        ),
+                        title: Text(
+                          'Integrações',
+                          style: TextStyle(
+                            color: textColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        subtitle: const Text(
+                          'Strava, Garmin, Apple Health e outros',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          color: Colors.grey.shade500,
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const IntegrationsScreen(),
                             ),
                           );
                         },
