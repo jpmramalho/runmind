@@ -1,246 +1,145 @@
 import 'package:flutter/material.dart';
-
-import '../data/workout_templates.dart';
-import '../main.dart';
-import 'main_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class OnboardingScreen extends StatefulWidget {
   final bool isEditing;
 
-  const OnboardingScreen({super.key, this.isEditing = false});
+  const OnboardingScreen({Key? key, this.isEditing = false}) : super(key: key);
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  final List<String> _levels = [
-    'Iniciante',
-    'Casual',
-    'Intermediário',
-    'Avançado',
-    'Profissional / Elite',
-  ];
+  final supabase = Supabase.instance.client;
+
   String? _selectedLevel;
-
-  final List<Map<String, String>> _goals = [
-    {'title': 'Perder peso', 'desc': 'Foco em queima calórica e consistência'},
-    {
-      'title': 'Melhorar o condicionamento físico',
-      'desc': 'Saúde geral, mais fôlego e energia',
-    },
-    {
-      'title': 'Correr minha primeira 5K / 10K',
-      'desc': 'Meta de distância específica para iniciantes',
-    },
-    {
-      'title': 'Treinar para uma prova (21K, 42K)',
-      'desc': 'Plano estruturado com data-alvo',
-    },
-    {
-      'title': 'Melhorar meu pace / performance',
-      'desc': 'Foco em velocidade e ritmo',
-    },
-    {
-      'title': 'Criar o hábito de correr',
-      'desc': 'Consistência, sem foco em performance',
-    },
-    {
-      'title': 'Reduzir estresse / saúde mental',
-      'desc': 'Bem-estar, corrida como terapia',
-    },
-    {
-      'title': 'Voltar a correr após uma pausa',
-      'desc': 'Retorno gradual, evitar lesões',
-    },
-  ];
   String? _selectedGoal;
-
-  int _currentStep = 0;
-  bool _isLoading = true;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _loadExistingUserData();
+    if (widget.isEditing) {
+      _loadCurrentUserData();
+    }
   }
 
-  Future<void> _loadExistingUserData() async {
-    try {
-      final user = supabase.auth.currentUser;
-      if (user != null) {
-        final data = await supabase
-            .from('profiles')
-            .select('level, goal')
-            .eq('id', user.id)
-            .maybeSingle();
+  Future<void> _loadCurrentUserData() async {
+    final user = supabase.auth.currentUser;
+    if (user != null) {
+      final data = await supabase
+          .from('profiles')
+          .select('level, goal')
+          .eq('id', user.id)
+          .maybeSingle();
 
-        if (data != null && mounted) {
-          setState(() {
-            _selectedLevel = data['level'];
-            _selectedGoal = data['goal'];
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint('Erro ao carregar dados de metas: $e');
-    } finally {
-      if (mounted) {
+      if (data != null && mounted) {
         setState(() {
-          _isLoading = false;
+          _selectedLevel = data['level'];
+          _selectedGoal = data['goal'];
         });
       }
     }
   }
 
-  Future<void> _handleSaveFlow() async {
-    if (widget.isEditing) {
-      final bool? confirm = await showDialog<bool>(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Atualizar Plano de Treinos?'),
-            content: Text(
-              'Você alterou suas metas para o nível "$_selectedLevel". Deseja gerar um novo plano semanal de treinos com base nessa escolha?\n\n'
-              'Ao clicar em SIM, seu cronograma de treinos atual será substituído.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text(
-                  'NÃO (Manter atual)',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF2D55),
-                ),
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text(
-                  'SIM (Gerar novos)',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-          );
-        },
-      );
-
-      if (confirm == true) {
-        await _saveGoalsAndGenerateWorkouts(generateNewWorkouts: true);
-      } else if (confirm == false) {
-        await _saveGoalsAndGenerateWorkouts(generateNewWorkouts: false);
-      }
-    } else {
-      await _saveGoalsAndGenerateWorkouts(generateNewWorkouts: true);
-    }
-  }
-
-  Future<void> _saveGoalsAndGenerateWorkouts({
-    required bool generateNewWorkouts,
-  }) async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final user = supabase.auth.currentUser;
-
-      if (user != null) {
-        // 1. Busca idade e sexo salvos no perfil para adaptar os treinos
-        final profileResponse = await supabase
-            .from('profiles')
-            .select('age, gender')
-            .eq('id', user.id)
-            .maybeSingle();
-
-        final int userAge = profileResponse?['age'] ?? 25;
-
-        // 2. Atualiza Nível e Objetivo no Perfil
-        await supabase
-            .from('profiles')
-            .update({
-              'level': _selectedLevel,
-              'goal': _selectedGoal,
-              'updated_at': DateTime.now().toIso8601String(),
-            })
-            .eq('id', user.id);
-
-        // 3. Se confirmou a substituição (ou cadastro inicial), cria os novos treinos
-        if (generateNewWorkouts && _selectedLevel != null) {
-          await supabase.from('workouts').delete().eq('user_id', user.id);
-
-          final selectedTemplate =
-              WorkoutTemplates.templates[_selectedLevel] ?? [];
-          final newWorkouts = selectedTemplate.map((item) {
-            String customDescription =
-                '${item['description']} (Foco: $_selectedGoal)';
-
-            // Exemplo de adaptação fisiológica simples por idade
-            if (userAge >= 45) {
-              customDescription +=
-                  ' - *Atenção reforçada ao aquecimento e recuperação.*';
-            }
-
-            return {
-              'user_id': user.id,
-              'title': item['title'],
-              'description': customDescription,
-              'day': item['day'],
-              'duration_min': item['duration_min'],
-              'is_completed': false,
-              'created_at': DateTime.now().toIso8601String(),
-            };
-          }).toList();
-
-          if (newWorkouts.isNotEmpty) {
-            await supabase.from('workouts').insert(newWorkouts);
-          }
-        }
-      }
-
-      if (!mounted) return;
-
+  Future<void> _saveGoalsAndGenerateWorkouts() async {
+    if (_selectedLevel == null || _selectedGoal == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Configurações salvas com sucesso!'),
-          backgroundColor: Colors.green,
+          content: Text('Selecione um nível e um objetivo para continuar.'),
         ),
       );
+      return;
+    }
 
-      if (widget.isEditing) {
-        Navigator.pop(context, true);
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainScreen()),
-        );
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      // 1. Busca a idade do perfil do usuário
+      final profileResponse = await supabase
+          .from('profiles')
+          .select('age')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      final int userAge = profileResponse?['age'] ?? 25;
+
+      // 2. Atualiza Nível e Objetivo no Perfil
+      await supabase
+          .from('profiles')
+          .update({
+            'level': _selectedLevel,
+            'goal': _selectedGoal,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', user.id);
+
+      // 3. Remove os treinos antigos e busca o novo plano no Supabase
+      await supabase.from('workouts').delete().eq('user_id', user.id);
+
+      final templateResponse = await supabase
+          .from('workout_templates')
+          .select('*, workout_template_items(*)')
+          .eq('level', _selectedLevel!)
+          .eq('goal', _selectedGoal!)
+          .maybeSingle();
+
+      if (templateResponse != null &&
+          templateResponse['workout_template_items'] != null) {
+        final List items = templateResponse['workout_template_items'];
+
+        final newWorkouts = items.map((item) {
+          String customDescription =
+              '${item['description']} (Foco: $_selectedGoal)';
+
+          if (userAge >= 45) {
+            customDescription +=
+                ' - *Atenção reforçada ao aquecimento e recuperação.*';
+          }
+
+          return {
+            'user_id': user.id,
+            'title': item['title'],
+            'description': customDescription,
+            'day': item['day'],
+            'day_of_week': item['day_of_week'],
+            'duration_min': item['duration_min'],
+            'distance_km': item['distance_km'],
+            'type': item['type'],
+            'intensity': item['intensity'],
+            'rpe': item['rpe'],
+            'is_completed': false,
+            'created_at': DateTime.now().toIso8601String(),
+          };
+        }).toList();
+
+        await supabase.from('workouts').insert(newWorkouts);
+      }
+
+      if (mounted) {
+        if (widget.isEditing) {
+          Navigator.of(context).pop(true);
+        } else {
+          Navigator.of(context).pushReplacementNamed('/home');
+        }
       }
     } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao salvar dados: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
+      debugPrint('Erro ao salvar plano: $e');
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Erro ao salvar plano: $e')));
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isLight = theme.brightness == Brightness.light;
-    final textColor = isLight ? Colors.black : Colors.white;
-
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -248,180 +147,242 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ? 'Editar Nível e Objetivos'
               : 'Configuração Inicial',
         ),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
+        centerTitle: true,
       ),
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFFFF2D55)),
-              )
-            : SingleChildScrollView(
-                padding: const EdgeInsets.all(20.0),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Qual o seu nível atual?',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildLevelOption(
+                    'Iniciante',
+                    'Pouca ou nenhuma experiência com corrida',
+                    Icons.directions_walk,
+                  ),
+                  _buildLevelOption(
+                    'Intermediário',
+                    'Já corre com frequência e quer melhorar a constância',
+                    Icons.directions_run,
+                  ),
+                  _buildLevelOption(
+                    'Avançado',
+                    'Atleta experiente em busca de novos tempos e metas',
+                    Icons.directions_bike,
+                  ),
+                  const SizedBox(height: 28),
+                  const Text(
+                    'Qual é o seu objetivo principal?',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildGoalOption(
+                    '5km',
+                    'Completar ou melhorar o tempo nos 5 km',
+                    Icons.flag_outlined,
+                  ),
+                  _buildGoalOption(
+                    '10km',
+                    'Aumentar a rodagem para fechar 10 km',
+                    Icons.emoji_events_outlined,
+                  ),
+                  _buildGoalOption(
+                    'Meia Maratona',
+                    'Desafio de 21 km em ritmo sustentável',
+                    Icons.military_tech_outlined,
+                  ),
+                  _buildGoalOption(
+                    'Maratona',
+                    'Preparação completa para 42 km',
+                    Icons.workspace_premium_outlined,
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: _saveGoalsAndGenerateWorkouts,
+                      child: Text(
+                        widget.isEditing
+                            ? 'Salvar e Recalcular Treinos'
+                            : 'Gerar Plano de Treinos',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildLevelOption(String title, String description, IconData icon) {
+    final isSelected = _selectedLevel == title;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
+    // Cores dinâmicas para alto contraste em Dark Mode
+    final cardBgColor = isSelected
+        ? (isDark
+              ? primaryColor.withOpacity(0.25)
+              : primaryColor.withOpacity(0.12))
+        : (isDark ? Colors.grey.shade900 : Colors.grey.shade100);
+
+    final borderColor = isSelected
+        ? primaryColor
+        : (isDark ? Colors.grey.shade800 : Colors.grey.shade300);
+
+    final titleColor = isSelected
+        ? (isDark ? Colors.white : primaryColor)
+        : (isDark ? Colors.grey.shade200 : Colors.black87);
+
+    final iconColor = isSelected
+        ? primaryColor
+        : (isDark ? Colors.grey.shade400 : Colors.grey.shade600);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: () => setState(() => _selectedLevel = title),
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cardBgColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: borderColor,
+              width: isSelected ? 2.0 : 1.0,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: iconColor, size: 28),
+              const SizedBox(width: 14),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (_currentStep == 0) _buildLevelStep(textColor),
-                    if (_currentStep == 1) _buildGoalStep(textColor),
-                    const SizedBox(height: 24),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        if (_currentStep > 0)
-                          OutlinedButton(
-                            onPressed: _isLoading
-                                ? null
-                                : () => setState(() => _currentStep--),
-                            child: const Text('Voltar'),
-                          )
-                        else
-                          const SizedBox(),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFF2D55),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 32,
-                              vertical: 12,
-                            ),
-                          ),
-                          onPressed: _isLoading
-                              ? null
-                              : () {
-                                  if (_currentStep == 0) {
-                                    if (_selectedLevel != null) {
-                                      setState(() => _currentStep++);
-                                    } else {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Selecione seu nível de corrida',
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  } else if (_currentStep == 1) {
-                                    if (_selectedGoal != null) {
-                                      _handleSaveFlow();
-                                    } else {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'Selecione o seu objetivo principal',
-                                              ),
-                                            ),
-                                          );
-                                    }
-                                  }
-                                },
-                          child: Text(
-                            _currentStep == 1 ? 'Concluir' : 'Avançar',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: titleColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade700,
+                      ),
                     ),
                   ],
                 ),
               ),
+              if (isSelected)
+                Icon(Icons.check_circle, color: primaryColor, size: 24),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildLevelStep(Color textColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Qual é o seu nível atual?',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: textColor,
-          ),
-        ),
-        const SizedBox(height: 16),
-        ..._levels.map((level) {
-          final isSelected = _selectedLevel == level;
-          return Card(
-            color: isSelected
-                ? const Color(0xFFFF2D55).withOpacity(0.15)
-                : null,
-            shape: RoundedRectangleBorder(
-              side: BorderSide(
-                color: isSelected
-                    ? const Color(0xFFFF2D55)
-                    : Colors.grey.shade300,
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ListTile(
-              title: Text(
-                level,
-                style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
-              ),
-              trailing: isSelected
-                  ? const Icon(Icons.check_circle, color: Color(0xFFFF2D55))
-                  : null,
-              onTap: () => setState(() => _selectedLevel = level),
-            ),
-          );
-        }),
-      ],
-    );
-  }
+  Widget _buildGoalOption(String title, String description, IconData icon) {
+    final isSelected = _selectedGoal == title;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
 
-  Widget _buildGoalStep(Color textColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Qual o seu objetivo com a corrida?',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: textColor,
+    // Cores dinâmicas para alto contraste em Dark Mode
+    final cardBgColor = isSelected
+        ? (isDark
+              ? primaryColor.withOpacity(0.25)
+              : primaryColor.withOpacity(0.12))
+        : (isDark ? Colors.grey.shade900 : Colors.grey.shade100);
+
+    final borderColor = isSelected
+        ? primaryColor
+        : (isDark ? Colors.grey.shade800 : Colors.grey.shade300);
+
+    final titleColor = isSelected
+        ? (isDark ? Colors.white : primaryColor)
+        : (isDark ? Colors.grey.shade200 : Colors.black87);
+
+    final iconColor = isSelected
+        ? primaryColor
+        : (isDark ? Colors.grey.shade400 : Colors.grey.shade600);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: () => setState(() => _selectedGoal = title),
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cardBgColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: borderColor,
+              width: isSelected ? 2.0 : 1.0,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: iconColor, size: 28),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: titleColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected)
+                Icon(Icons.check_circle, color: primaryColor, size: 24),
+            ],
           ),
         ),
-        const SizedBox(height: 16),
-        ..._goals.map((item) {
-          final isSelected = _selectedGoal == item['title'];
-          return Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            color: isSelected
-                ? const Color(0xFFFF2D55).withOpacity(0.15)
-                : null,
-            shape: RoundedRectangleBorder(
-              side: BorderSide(
-                color: isSelected
-                    ? const Color(0xFFFF2D55)
-                    : Colors.grey.shade300,
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ListTile(
-              title: Text(
-                item['title']!,
-                style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
-              ),
-              subtitle: Text(
-                item['desc']!,
-                style: const TextStyle(fontSize: 12),
-              ),
-              trailing: isSelected
-                  ? const Icon(Icons.check_circle, color: Color(0xFFFF2D55))
-                  : null,
-              onTap: () => setState(() => _selectedGoal = item['title']),
-            ),
-          );
-        }),
-      ],
+      ),
     );
   }
 }
