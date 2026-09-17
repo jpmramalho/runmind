@@ -7,6 +7,7 @@ import 'history_screen.dart';
 import 'integrations_screen.dart';
 import 'login_screen.dart';
 import 'onboarding_screen.dart';
+import 'privacy_terms_screen.dart';
 
 class CpfInputFormatter extends TextInputFormatter {
   @override
@@ -570,7 +571,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Icons.chevron_right,
                           color: Colors.grey.shade500,
                         ),
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const PrivacyTermsScreen(),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
