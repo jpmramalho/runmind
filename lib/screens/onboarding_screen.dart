@@ -63,7 +63,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Busca idade do perfil
       final profileResponse = await supabase
           .from('profiles')
           .select('age')
@@ -72,20 +71,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       final int userAge = profileResponse?['age'] ?? 25;
 
-      // 2. Atualiza nível e objetivo no perfil
-      await supabase
-          .from('profiles')
-          .update({
-            'level': _selectedLevel,
-            'goal': _selectedGoal,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', user.id);
+      await supabase.from('profiles').upsert({
+        'id': user.id,
+        'level': _selectedLevel,
+        'goal': _selectedGoal,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
 
-      // 3. Remove treinos antigos
       await supabase.from('workouts').delete().eq('user_id', user.id);
 
-      // 4. Carrega o plano (primeiro tenta Supabase, depois JSON local)
       List<Map<String, dynamic>> items = [];
 
       final templateResponse = await supabase
@@ -109,7 +103,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'Nenhum plano encontrado para este nível e objetivo. Verifique o JSON.',
+                'Nenhum plano encontrado para este nível e objetivo.',
               ),
               backgroundColor: Colors.red,
             ),
@@ -118,7 +112,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         return;
       }
 
-      // 5. Prepara os novos treinos (apenas colunas mais básicas)
       final newWorkouts = items.map((item) {
         String customDescription =
             '${item['description'] ?? ''} (Foco: $_selectedGoal)';
@@ -139,7 +132,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         };
       }).toList();
 
-      // 6. Insere os novos treinos
       await supabase.from('workouts').insert(newWorkouts);
 
       if (mounted) {
@@ -171,7 +163,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  /// Carrega o plano a partir do JSON local
   Future<List<Map<String, dynamic>>> _loadPlanFromLocalJson(
     String level,
     String goal,

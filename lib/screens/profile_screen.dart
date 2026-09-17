@@ -1,10 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../main.dart';
 import 'edit_personal_data_screen.dart';
 import 'history_screen.dart';
 import 'integrations_screen.dart';
+import 'login_screen.dart';
 import 'onboarding_screen.dart';
+
+class CpfInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text.replaceAll(RegExp(r'\D'), '');
+    if (text.length > 11) return oldValue;
+
+    var formatted = '';
+    for (var i = 0; i < text.length; i++) {
+      if (i == 3 || i == 6) formatted += '.';
+      if (i == 9) formatted += '-';
+      formatted += text[i];
+    }
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -30,8 +55,261 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _signOut() async {
     await supabase.auth.signOut();
     if (mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false,
+      );
     }
+  }
+
+  Future<void> _showDeleteAccountDialog(
+    BuildContext context,
+    String? currentCpf,
+  ) async {
+    final cpfController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isChecking = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            final theme = Theme.of(context);
+            final isLight = theme.brightness == Brightness.light;
+            final textColor = isLight ? Colors.black : Colors.white;
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              backgroundColor: theme.cardColor,
+              title: Row(
+                children: [
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: Color(0xFFFF2D55),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Excluir Conta',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                ],
+              ),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Para confirmar a exclusão, informe o seu CPF cadastrado:',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isLight
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: cpfController,
+                      keyboardType: TextInputType.number,
+                      style: TextStyle(color: textColor),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        CpfInputFormatter(),
+                      ],
+                      decoration: InputDecoration(
+                        labelText: 'CPF',
+                        hintText: '000.000.000-00',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) {
+                        final clean =
+                            value?.replaceAll(RegExp(r'\D'), '') ?? '';
+                        if (clean.length != 11) {
+                          return 'Informe um CPF válido com 11 dígitos';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isChecking ? null : () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF2D55),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: isChecking
+                      ? null
+                      : () async {
+                          if (!formKey.currentState!.validate()) return;
+
+                          setStateDialog(() => isChecking = true);
+
+                          try {
+                            final user = supabase.auth.currentUser;
+                            if (user == null) return;
+
+                            final cleanInputCpf = cpfController.text.replaceAll(
+                              RegExp(r'\D'),
+                              '',
+                            );
+                            final cleanUserCpf = currentCpf?.replaceAll(
+                              RegExp(r'\D'),
+                              '',
+                            );
+
+                            if (cleanUserCpf == null ||
+                                cleanUserCpf.isEmpty ||
+                                cleanUserCpf != cleanInputCpf) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'CPF incorreto ou não cadastrado. Verifique os dados.',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                              setStateDialog(() => isChecking = false);
+                              return;
+                            }
+
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              _showFinalConfirmationDialog(context);
+                            }
+                          } catch (e) {
+                            setStateDialog(() => isChecking = false);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Erro ao validar CPF: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  child: isChecking
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          'Validar CPF',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showFinalConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        final theme = Theme.of(context);
+        final isLight = theme.brightness == Brightness.light;
+        final textColor = isLight ? Colors.black : Colors.white;
+
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: theme.cardColor,
+          title: Text(
+            'Tem certeza?',
+            style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
+          ),
+          content: Text(
+            'Tem certeza que deseja excluir sua conta? Esta ação apagará seus treinos, histórico e dados permanentemente.',
+            style: TextStyle(
+              fontSize: 14,
+              color: isLight ? Colors.grey.shade800 : Colors.grey.shade300,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Não, cancelar'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF2D55),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () async {
+                try {
+                  final user = supabase.auth.currentUser;
+                  if (user != null) {
+                    await supabase
+                        .from('workouts')
+                        .delete()
+                        .eq('user_id', user.id);
+                    await supabase.from('profiles').delete().eq('id', user.id);
+                  }
+
+                  await supabase.auth.signOut();
+
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (context) => const LoginScreen(),
+                      ),
+                      (route) => false,
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Erro ao excluir a conta: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text(
+                'Sim, excluir conta',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -233,7 +511,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       Divider(height: 1, color: Colors.grey.shade800),
 
-                      // --- NOVO BOTÃO DE INTEGRAÇÕES ---
                       ListTile(
                         leading: const Icon(
                           Icons.link,
@@ -318,6 +595,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       side: const BorderSide(color: Colors.redAccent),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: TextButton.icon(
+                    onPressed: () => _showDeleteAccountDialog(
+                      context,
+                      profile?['cpf']?.toString(),
+                    ),
+                    icon: const Icon(
+                      Icons.delete_forever,
+                      color: Color(0xFFFF2D55),
+                    ),
+                    label: const Text(
+                      'Excluir Minha Conta',
+                      style: TextStyle(
+                        color: Color(0xFFFF2D55),
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
