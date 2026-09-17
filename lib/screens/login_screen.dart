@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../main.dart';
+import 'onboarding_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -65,7 +66,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
         _showSnackBar('Conta criada com sucesso!');
         if (mounted) {
-          Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+          // Navegação direta para a OnboardingScreen ao cadastrar
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const OnboardingScreen(isEditing: false),
+            ),
+            (route) => false,
+          );
         }
       } else {
         // Fazer login no Supabase
@@ -92,8 +99,12 @@ class _LoginScreenState extends State<LoginScreen> {
           }
 
           if (mounted) {
-            Navigator.of(context)
-                .pushNamedAndRemoveUntil('/', (route) => false);
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => const OnboardingScreen(isEditing: false),
+              ),
+              (route) => false,
+            );
           }
         }
       }
@@ -127,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
           ),
           content: const Text(
-            'Esta conta foi desativada anteriormente. Deseja reativar sua conta e continuar?',
+            'Esta conta foi desativada anteriormente. Para reativá-la, será necessário recadastrar seus dados, nível e objetivos.',
             style: TextStyle(fontSize: 14, color: Colors.white70),
           ),
           actions: [
@@ -158,8 +169,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (context.mounted) {
                     Navigator.pop(context);
                     _showSnackBar('Conta reativada com sucesso!');
-                    Navigator.of(context)
-                        .pushNamedAndRemoveUntil('/', (route) => false);
+                    // Navegação direta com MaterialPageRoute para evitar erro de rotas nomeadas
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const OnboardingScreen(isEditing: false),
+                      ),
+                      (route) => false,
+                    );
                   }
                 } catch (e) {
                   _showSnackBar('Erro ao reativar conta: $e');

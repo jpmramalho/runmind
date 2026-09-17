@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'main_screen.dart'; // Importação corrigida para referenciar a MainScreen na mesma pasta
+
 class OnboardingScreen extends StatefulWidget {
   final bool isEditing;
 
@@ -145,7 +147,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         if (widget.isEditing) {
           Navigator.of(context).pop(true);
         } else {
-          Navigator.of(context).pushReplacementNamed('/home');
+          // Redireciona para a classe MainScreen() usando navegação direta via MaterialPageRoute
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const MainScreen()),
+            (route) => false,
+          );
         }
       }
     } catch (e) {
