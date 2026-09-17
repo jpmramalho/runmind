@@ -58,6 +58,15 @@ class _WorkoutsScreenState extends State<WorkoutsScreen> {
           .from('workouts')
           .update({'is_completed': newStatus})
           .eq('id', workout['id']);
+
+      // Verifica se todos os treinos da semana foram concluídos
+      final allCompleted =
+          _workouts.isNotEmpty &&
+          _workouts.every((w) => w['is_completed'] == true);
+
+      if (allCompleted && newStatus && mounted) {
+        _showWeekCompletedDialog();
+      }
     } catch (e) {
       setState(() {
         workout['is_completed'] = currentStatus;
@@ -70,6 +79,76 @@ class _WorkoutsScreenState extends State<WorkoutsScreen> {
         ),
       );
     }
+  }
+
+  void _showWeekCompletedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        final theme = Theme.of(context);
+        final isLight = theme.brightness == Brightness.light;
+        final textColor = isLight ? Colors.black : Colors.white;
+
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: theme.cardColor,
+          title: Column(
+            children: [
+              const Icon(
+                Icons.emoji_events,
+                color: Color(0xFFFFD700),
+                size: 56,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Parabéns!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Você concluiu todos os treinos da semana! 🎉\n\nSeu novo treino para a próxima semana será gerado automaticamente.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 15,
+              height: 1.4,
+              color: isLight ? Colors.grey.shade700 : Colors.grey.shade300,
+            ),
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF2D55),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
+              child: const Text(
+                'Continuar',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
