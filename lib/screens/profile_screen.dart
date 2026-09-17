@@ -272,7 +272,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 try {
                   final user = supabase.auth.currentUser;
                   if (user != null) {
-                    // Marca o perfil como inativo no banco de dados
                     await supabase
                         .from('profiles')
                         .update({'is_active': false})

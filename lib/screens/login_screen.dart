@@ -65,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         _showSnackBar('Conta criada com sucesso!');
         if (mounted) {
-          Navigator.of(context).pushReplacementNamed('/home');
+          Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
         }
       } else {
         // Fazer login no Supabase
@@ -92,7 +92,8 @@ class _LoginScreenState extends State<LoginScreen> {
           }
 
           if (mounted) {
-            Navigator.of(context).pushReplacementNamed('/home');
+            Navigator.of(context)
+                .pushNamedAndRemoveUntil('/', (route) => false);
           }
         }
       }
@@ -157,7 +158,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (context.mounted) {
                     Navigator.pop(context);
                     _showSnackBar('Conta reativada com sucesso!');
-                    Navigator.of(context).pushReplacementNamed('/home');
+                    Navigator.of(context)
+                        .pushNamedAndRemoveUntil('/', (route) => false);
                   }
                 } catch (e) {
                   _showSnackBar('Erro ao reativar conta: $e');
