@@ -250,7 +250,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
           ),
           content: Text(
-            'Tem certeza que deseja excluir sua conta? Esta ação apagará seus treinos, histórico e dados permanentemente.',
+            'Sua conta será desativada. Seus dados serão mantidos e você poderá reativá-la ao fazer login novamente no futuro.',
             style: TextStyle(
               fontSize: 14,
               color: isLight ? Colors.grey.shade800 : Colors.grey.shade300,
@@ -272,11 +272,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 try {
                   final user = supabase.auth.currentUser;
                   if (user != null) {
+                    // Marca o perfil como inativo no banco de dados
                     await supabase
-                        .from('workouts')
-                        .delete()
-                        .eq('user_id', user.id);
-                    await supabase.from('profiles').delete().eq('id', user.id);
+                        .from('profiles')
+                        .update({'is_active': false})
+                        .eq('id', user.id);
                   }
 
                   await supabase.auth.signOut();
@@ -294,7 +294,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Erro ao excluir a conta: $e'),
+                        content: Text('Erro ao desativar conta: $e'),
                         backgroundColor: Colors.red,
                       ),
                     );
@@ -302,7 +302,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 }
               },
               child: const Text(
-                'Sim, excluir conta',
+                'Sim, desativar conta',
                 style: TextStyle(color: Colors.white),
               ),
             ),

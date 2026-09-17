@@ -41,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       if (_isSignUp) {
-        // 1. Criar a conta de autenticação no Supabase
+        // 1. Criar a conta no Supabase Auth
         final AuthResponse response = await supabase.auth.signUp(
           email: email,
           password: password,
@@ -49,35 +49,178 @@ class _LoginScreenState extends State<LoginScreen> {
 
         final user = response.user;
 
-        // 2. Tentar criar a linha no banco de dados (profiles)
+        // 2. Criar a linha no perfil com is_active = true
         if (user != null) {
           try {
             await supabase.from('profiles').upsert({
               'id': user.id,
               'name': email.split('@').first,
+              'is_active': true,
               'updated_at': DateTime.now().toIso8601String(),
             });
           } catch (dbError) {
-            // Caso a tabela 'profiles' ainda não tenha sido criada no Supabase SQL Editor
             debugPrint('Erro ao salvar profile: $dbError');
           }
         }
 
         _showSnackBar('Conta criada com sucesso!');
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/home');
+        }
       } else {
         // Fazer login no Supabase
-        await supabase.auth.signInWithPassword(
+        final AuthResponse response = await supabase.auth.signInWithPassword(
           email: email,
           password: password,
         );
+
+        final user = response.user;
+
+        if (user != null) {
+          // Checa se a conta está inativa
+          final profile = await supabase
+              .from('profiles')
+              .select('is_active')
+              .eq('id', user.id)
+              .maybeSingle();
+
+          if (profile != null && profile['is_active'] == false) {
+            if (mounted) {
+              _showReactivateDialog(user.id);
+            }
+            return;
+          }
+
+          if (mounted) {
+            Navigator.of(context).pushReplacementNamed('/home');
+          }
+        }
       }
     } on AuthException catch (e) {
-      _showSnackBar(e.message);
+      if (!_isSignUp &&
+          (e.message.contains('Invalid login credentials') ||
+              e.message.contains('user_not_found'))) {
+        _showRegisterDialog();
+      } else {
+        _showSnackBar(e.message);
+      }
     } catch (e) {
       _showSnackBar('Erro: ${e.toString()}');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showReactivateDialog(String userId) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: const Color(0xFF1C1C22),
+          title: const Text(
+            'Conta Desativada',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          content: const Text(
+            'Esta conta foi desativada anteriormente. Deseja reativar sua conta e continuar?',
+            style: TextStyle(fontSize: 14, color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await supabase.auth.signOut();
+                if (context.mounted) Navigator.pop(context);
+              },
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF2D55),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () async {
+                try {
+                  await supabase
+                      .from('profiles')
+                      .update({'is_active': true})
+                      .eq('id', userId);
+
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    _showSnackBar('Conta reativada com sucesso!');
+                    Navigator.of(context).pushReplacementNamed('/home');
+                  }
+                } catch (e) {
+                  _showSnackBar('Erro ao reativar conta: $e');
+                }
+              },
+              child: const Text(
+                'Reativar Conta',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showRegisterDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: const Color(0xFF1C1C22),
+          title: const Text(
+            'Conta não encontrada',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          content: const Text(
+            'Não encontramos uma conta com este e-mail. Deseja se cadastrar agora?',
+            style: TextStyle(fontSize: 14, color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF2D55),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                setState(() {
+                  _isSignUp = true;
+                });
+              },
+              child: const Text(
+                'Cadastrar-se',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showSnackBar(String message) {
