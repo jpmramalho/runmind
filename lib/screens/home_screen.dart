@@ -335,28 +335,32 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(16),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(16),
-                            onTap: () async {
-                              final profile = await _fetchUserProfile();
-                              final fullName = profile != null
-                                  ? (profile['name'] ?? '')
-                                  : '';
-                              final firstName = fullName.isNotEmpty
-                                  ? fullName.split(' ')[0]
-                                  : 'Corredor';
+                            // Se for dia de descanso, desativa a interatividade do clique (onTap: null)
+                            onTap: isRestDay
+                                ? null
+                                : () async {
+                                    final profile = await _fetchUserProfile();
+                                    final fullName = profile != null
+                                        ? (profile['name'] ?? '')
+                                        : '';
+                                    final firstName = fullName.isNotEmpty
+                                        ? fullName.split(' ')[0]
+                                        : 'Corredor';
 
-                              if (context.mounted) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => WorkoutDetailScreen(
-                                      userName: firstName,
-                                      workoutData: workout,
-                                      isRestDay: isRestDay,
-                                    ),
-                                  ),
-                                );
-                              }
-                            },
+                                    if (context.mounted) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              WorkoutDetailScreen(
+                                                userName: firstName,
+                                                workoutData: workout,
+                                                isRestDay: isRestDay,
+                                              ),
+                                        ),
+                                      );
+                                    }
+                                  },
                             child: Padding(
                               padding: const EdgeInsets.all(16.0),
                               child: Row(
